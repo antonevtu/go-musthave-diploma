@@ -1,3 +1,7 @@
 package main
 
-func main() {}
+import "github.com/antonevtu/go-musthave-diploma/internal/app"
+
+func main() {
+	app.Run()
+}
