@@ -11,7 +11,7 @@ func balance(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 	}
 }
 
-func withdrawOrder(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
+func withdrawToOrder(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 	}

@@ -7,6 +7,14 @@ import (
 )
 
 type Repositorier interface {
+	Register(login string, password string) (token string, err error)
+	Login(login string, password string) (token string, err error)
+	Authorize(token string) (userID int, err error)
+	PostOrder()
+	GetOrders()
+	Balance()
+	WithdrawToOrder()
+	GetWithdrawals()
 }
 
 func NewRouter(repo Repositorier, cfgApp cfg.Config) chi.Router {
@@ -27,10 +35,20 @@ func NewRouter(repo Repositorier, cfgApp cfg.Config) chi.Router {
 	r.Route("/", func(r chi.Router) {
 		r.Post("/api/user/register", register(repo, cfgApp))                    // регистрация пользователя
 		r.Post("/api/user/login", login(repo, cfgApp))                          // аутентификация пользователя
-		r.Post("/api/user/orders", postOrder(repo, cfgApp))                     // загрузка пользователем номера заказа для расчета
+
+
+
+		r.Post("/api/user/orders", middlewareAuth(postOrder(), repo, cfgApp) )                     // загрузка пользователем номера заказа для расчета
+
+
+
+
+
+
+
 		r.Get("/api/user/orders", getOrders(repo, cfgApp))                      // получение списка загруженных пользователем номеров звказов, статусов их обработки и информации о начислениях
 		r.Get("/api/user/balance", balance(repo, cfgApp))                       // получение текущего баланса счета баллов лояльности пользователя
-		r.Post("/api/user/balance/withdraw", withdrawOrder(repo, cfgApp))       // запрос на списание баллов с накопительного счета в счет оплаты нового заказа
+		r.Post("/api/user/balance/withdraw", withdrawToOrder(repo, cfgApp))       // запрос на списание баллов с накопительного счета в счет оплаты нового заказа
 		r.Delete("/api/user/balance/withdrawals", getWithdrawals(repo, cfgApp)) // получение информации о выводе средств с накопительног осчета пользователем
 	})
 	return r

@@ -5,10 +5,10 @@ import (
 	"net/http"
 )
 
-func postOrder(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func postOrder(repo Repositorier, cfgApp cfg.Config) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-	}
+	})
 }
 
 func getOrders(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
