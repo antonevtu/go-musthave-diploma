@@ -24,7 +24,7 @@ func Run() {
 	defer cancel()
 
 	// database
-	dbPool, err := repository.NewDB(ctx, cfgApp.DatabaseDSN)
+	dbPool, err := repository.NewDB(ctx, cfgApp.DatabaseURI)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func Run() {
 	//r := handlers.NewRouter(repo, cfgApp)
 	r := handlers.NewRouter(repo, cfgApp)
 	httpServer := &http.Server{
-		Addr:        cfgApp.ServerAddress,
+		Addr:        cfgApp.RunAddress,
 		Handler:     r,
 		BaseContext: func(_ net.Listener) context.Context { return ctx },
 	}
