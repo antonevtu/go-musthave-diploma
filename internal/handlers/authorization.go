@@ -47,7 +47,7 @@ func register(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 			}
 
 			// register in repository
-			token, err := repo.Register(r.Context(), req.login, req.password)
+			token, err := repo.Register(r.Context(), req.login, req.password, cfgApp)
 			if errors.Is(err, repository.ErrLoginBusy) {
 				http.Error(w, err.Error(), http.StatusConflict)
 				return
@@ -84,7 +84,7 @@ func login(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 				return
 			}
 
-			// check login, password for length, TODO: special symbols
+			// check login, password for length, special symbols
 			if !correctLoginPassword(req) {
 				http.Error(w, "invalid login or password length", http.StatusBadRequest)
 				return

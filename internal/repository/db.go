@@ -2,9 +2,16 @@ package repository
 
 import (
 	"context"
+	"errors"
+	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
 )
+
+const hashLen = 32 // SHA256
 
 type dbT struct {
 	*pgxpool.Pool
@@ -26,4 +33,83 @@ func NewDB(ctx context.Context, url string) (dbT, error) {
 	}
 
 	return pool, nil
+}
+
+func (db *dbT) Register(ctx context.Context, login, password string, cfgApp cfg.Config) (token string, err error) {
+	salt, err := RandBytes(hashLen)
+	if err != nil {
+		return "", err
+	}
+
+	pwdHash := ToHash(password, cfgApp.SecretKey, salt)
+
+	sql := "insert into users values(default, '$1', '$2', '$3') returning user_id"
+	resp := db.Pool.QueryRow(ctx, sql, login, pwdHash, salt)
+
+	var userID int
+	var pgErr *pgconn.PgError
+
+	err = resp.Scan(&userID)
+	if errors.As(err, &pgErr) {
+		if pgErr.Code == pgerrcode.UniqueViolation {
+			return "", ErrLoginBusy
+		}
+	} else if err != nil {
+		return "", err
+	}
+
+	token, err = NewJwtToken(userID, cfgApp)
+	if err != nil {
+		return "", err
+	}
+	return token, err
+}
+
+func (db *dbT) Login(ctx context.Context, login, password string, cfgApp cfg.Config) (token string, err error) {
+	sql := "select user_id, pwd, pwd_salt from users where login = $1"
+	resp := db.Pool.QueryRow(ctx, sql, login)
+
+	var userID int
+	var pwdBase, salt string
+	err = resp.Scan(&userID, &pwdBase, &salt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrInvalidLoginPassword
+	}
+	if err != nil {
+		return "", err
+	}
+
+	pwdHash := ToHash(password, cfgApp.SecretKey, salt)
+	if pwdHash == pwdBase {
+		token, err = NewJwtToken(userID, cfgApp)
+		if err != nil {
+			return "", err
+		}
+	}
+	return "", ErrInvalidLoginPassword
+}
+
+func (db *dbT) Authorize(ctx context.Context, token string) (userID int, err error) {
+	userID := ctx.Value("userID").(int)
+
+}
+
+func (db *dbT) PostOrder(ctx context.Context, order int) error {
+
+}
+
+func (db *dbT) GetOrders(ctx context.Context) (OrdersList, error) {
+
+}
+
+func (db *dbT) Balance(ctx context.Context) (Balance, error) {
+
+}
+
+func (db *dbT) WithdrawToOrder(ctx context.Context, order int, sum float64) error {
+
+}
+
+func (db *dbT) GetWithdrawals(ctx context.Context) (WithdrawalsList, error) {
+
 }

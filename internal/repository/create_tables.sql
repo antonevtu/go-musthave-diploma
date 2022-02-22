@@ -12,10 +12,10 @@ create table if not exists users
 create table if not exists tokens
 (
     id serial,
-    iser_id integer,
+    user_id integer,
     key_salt char(64),
     foreign key (user_id) references users (user_id) on delete cascade
-)
+);
 
 create table if not exists orders
 (
@@ -62,3 +62,7 @@ create table if not exists cache
     uploaded_at timestamp default now(),
     last_checked_at timestamp default now()
 );
+
+-- register
+insert into users values(default, '$1', '$2', '$3')
+

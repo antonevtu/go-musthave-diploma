@@ -9,8 +9,8 @@ import (
 )
 
 type Repositorier interface {
-	Register(ctx context.Context, login string, password string) (token string, err error)
-	Login(ctx context.Context, login string, password string) (token string, err error)
+	Register(ctx context.Context, login string, password string, cfgApp cfg.Config) (token string, err error)
+	Login(ctx context.Context, login string, password string, cfgApp cfg.Config) (token string, err error)
 	Authorize(ctx context.Context, token string) (userID int, err error)
 	PostOrder(ctx context.Context, order int) error
 	GetOrders(ctx context.Context) (repository.OrdersList, error)
