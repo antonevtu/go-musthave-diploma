@@ -32,9 +32,9 @@ func Run() {
 	repo := &dbPool
 
 	// repository pool for delete items (set flag "deleted")
-	deleterPool := pool.New(ctx, repo)
-	defer deleterPool.Close()
-	cfgApp.DeleterChan = deleterPool.Input
+	//deleterPool := pool.New(ctx, repo)
+	//defer deleterPool.Close()
+	//cfgApp.DeleterChan = deleterPool.Input
 
 	//r := handlers.NewRouter(repo, cfgApp)
 	r := handlers.NewRouter(repo, cfgApp)
@@ -63,8 +63,8 @@ func Run() {
 	select {
 	case <-signalChan:
 		log.Println("os.Interrupt - shutting down...")
-	case err := <-deleterPool.ErrCh:
-		log.Println(err)
+		//case err := <-deleterPool.ErrCh:
+		//	log.Println(err)
 	}
 	cancel()
 

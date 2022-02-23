@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
 	"github.com/dgrijalva/jwt-go/v4"
 	"time"
@@ -51,12 +52,17 @@ func RandBytes(n int) (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func ParseToken(accessToken string, signingKey []byte) (string, error) {
+func ParseToken(accessToken string, signingKey string) (int, error) {
 	claims := new(jwtClaims)
 	token, err := jwt.ParseWithClaims(accessToken, claims, func(token *jwt.Token) (interface{}, error) {
-		return signingKey, nil
+		return []byte(signingKey), nil
 	})
 	if err != nil {
-		return "", err
+		return 0, err
+	}
+	if claims1, ok := token.Claims.(jwtClaims); ok && token.Valid {
+		return claims1.UserID, nil
+	} else {
+		return 0, errors.New("Unauthorized")
 	}
 }

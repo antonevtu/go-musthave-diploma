@@ -91,7 +91,7 @@ func login(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 			}
 
 			// authentication in repository
-			token, err := repo.Login(r.Context(), req.login, req.password)
+			token, err := repo.Login(r.Context(), req.login, req.password, cfgApp)
 			if errors.Is(err, repository.ErrInvalidLoginPassword) {
 				http.Error(w, err.Error(), http.StatusConflict)
 				return

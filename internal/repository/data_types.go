@@ -1,21 +1,34 @@
 package repository
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
-var ErrLoginBusy = errors.New("login is busy")
-var ErrInvalidLoginPassword = errors.New("invalid login/password pair")
+// ошибки обращения к репозиторию
+var (
+	ErrLoginBusy                         = errors.New("login is busy")
+	ErrInvalidLoginPassword              = errors.New("invalid login/password pair")
+	ErrDuplicateOrderNumber              = errors.New("order number already loaded")
+	ErrDuplicateOrderNumberByAnotherUser = errors.New("order number already loaded by another user")
+	ErrNotEnoughFunds                    = errors.New("not enough funds in account")
+)
 
-var ErrDuplicateOrderNumber = errors.New("order number already loaded")
-var ErrDuplicateOrderNumberByAnotherUser = errors.New("order number already loaded by another user")
+// статусы начисления баллов заказам
+var (
+	AccrualRegistered = "REGISTERED"
+	AccrualInvalid    = "INVALID"
+	AccrualProcessing = "PROCESSING"
+	AccrualProcessed  = "PROCESSED"
+)
 
-var ErrNotEnoughFunds = errors.New("not enough funds in account")
-
-type OrdersList []orderItem
+type OrderList []orderItem
 type orderItem struct {
-	Number     string `json:"number"`
-	Status     string `json:"status"`
-	Accrual    int    `json:"accrual"`
-	UploadedAt string `json:"uploaded_at"`
+	Number       string    `json:"number"`
+	Status       string    `json:"status"`
+	Accrual      int       `json:"accrual"`
+	UploadedAt   string    `json:"uploaded_at"`
+	UploadedAtGo time.Time `json:"-"`
 }
 
 type Balance struct {
@@ -25,7 +38,8 @@ type Balance struct {
 
 type WithdrawalsList []withdrawalItem
 type withdrawalItem struct {
-	Order       string  `json:"order"`
-	Sum         float64 `json:"sum"`
-	ProcessedAt string  `json:"processed_at"`
+	Order         string    `json:"order"`
+	Sum           float64   `json:"sum"`
+	ProcessedAt   string    `json:"processed_at"`
+	ProcessedAtGo time.Time `json:"-"`
 }

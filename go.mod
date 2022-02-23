@@ -3,6 +3,7 @@ module github.com/antonevtu/go-musthave-diploma
 go 1.17
 
 require (
+	github.com/ShiraazMoollatjie/goluhn v0.0.0-20211017190329-0d86158c056a
 	github.com/caarlos0/env/v6 v6.8.0
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/go-chi/chi/v5 v5.0.7
@@ -11,7 +12,6 @@ require (
 )
 
 require (
-	github.com/ShiraazMoollatjie/goluhn v0.0.0-20211017190329-0d86158c056a // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.11.0 // indirect
 	github.com/jackc/pgerrcode v0.0.0-20201024163028-a0d42d470451 // indirect
