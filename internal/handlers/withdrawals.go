@@ -8,7 +8,6 @@ import (
 	"github.com/antonevtu/go-musthave-diploma/internal/repository"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -39,7 +38,7 @@ type withdrawal struct {
 
 func withdrawToOrder(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -54,22 +53,26 @@ func withdrawToOrder(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 				return
 			}
 
-			orderNum, err := strconv.Atoi(req.Order)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-			}
-
 			err = goluhn.Validate(req.Order)
 			if err != nil {
 				http.Error(w, "luhn validation failed", http.StatusUnprocessableEntity)
 			}
 
-			err = repo.WithdrawToOrder(r.Context(), orderNum, req.Sum)
+			err = repo.WithdrawToOrder(r.Context(), req.Order, req.Sum)
 			if errors.Is(err, repository.ErrNotEnoughFunds) {
 				http.Error(w, err.Error(), http.StatusPaymentRequired)
 			}
+			if errors.Is(err, repository.ErrOrderAlreadyExists) {
+				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+				return
+			}
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 
 			w.WriteHeader(http.StatusOK)
+		} else {
+			http.Error(w, "invalid content-type: must be application/json", http.StatusBadRequest)
 		}
 	}
 }

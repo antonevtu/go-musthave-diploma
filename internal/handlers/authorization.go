@@ -13,19 +13,19 @@ import (
 )
 
 const minLoginLength = 4
-const maxLoginLength = 32
+const maxLoginLength = 64
 const minPasswordLength = 4
 
 var secretKey = []byte("abc")
 
 type registerT struct {
-	login    string
-	password string
+	Login    string `json:"login"`
+	Password string `json:"password"`
 }
 
 func register(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -47,7 +47,7 @@ func register(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 			}
 
 			// register in repository
-			token, err := repo.Register(r.Context(), req.login, req.password, cfgApp)
+			token, err := repo.Register(r.Context(), req.Login, req.Password, cfgApp)
 			if errors.Is(err, repository.ErrLoginBusy) {
 				http.Error(w, err.Error(), http.StatusConflict)
 				return
@@ -69,7 +69,7 @@ func register(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 
 func login(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -91,9 +91,9 @@ func login(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 			}
 
 			// authentication in repository
-			token, err := repo.Login(r.Context(), req.login, req.password, cfgApp)
+			token, err := repo.Login(r.Context(), req.Login, req.Password, cfgApp)
 			if errors.Is(err, repository.ErrInvalidLoginPassword) {
-				http.Error(w, err.Error(), http.StatusConflict)
+				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}
 			if err != nil {
@@ -119,7 +119,7 @@ func middlewareAuth(next http.Handler, repo Repositorier, cfgApp cfg.Config) htt
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		userID, err := repo.Authorize(r.Context(), tokenString)
+		userID, err := repo.Authorize(r.Context(), tokenString, cfgApp)
 		if errors.Is(err, repository.ErrInvalidLoginPassword) {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -133,8 +133,8 @@ func middlewareAuth(next http.Handler, repo Repositorier, cfgApp cfg.Config) htt
 }
 
 func correctLoginPassword(req registerT) bool {
-	l := utf8.RuneCountInString(req.login)
-	p := utf8.RuneCountInString(req.password)
+	l := utf8.RuneCountInString(req.Login)
+	p := utf8.RuneCountInString(req.Password)
 	if (l >= minLoginLength) && (l <= maxLoginLength) && (p >= minPasswordLength) {
 		return true
 	}

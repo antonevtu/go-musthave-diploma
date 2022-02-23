@@ -13,7 +13,7 @@ import (
 
 func postOrder(repo Repositorier, cfgApp cfg.Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Content-Type"), "text/plain") {
+		if strings.Contains(r.Header.Get("Content-Type"), "text/plain") {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

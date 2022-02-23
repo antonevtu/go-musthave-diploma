@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
-	"time"
 )
 
 const hashLen = 32 // SHA256
@@ -28,7 +27,7 @@ func NewDB(ctx context.Context, url string) (dbT, error) {
 	}
 
 	// создание таблиц (см. create_tables.sql)
-	sql := "create table if not exists users\n(\n    user_id serial primary key,\n    login varchar(32) unique,\n    pwd char(64),\n    pwd_salt char(64),\n    registered_at timestamp default now()\n    );\n\ncreate table if not exists tokens\n(\n    id serial,\n    user_id integer,\n    key_salt char(64),\n    foreign key (user_id) references users (user_id) on delete cascade\n    );\n\ncreate table if not exists orders\n(\n    id serial,\n    order_num varchar(32) primary key,\n    user_id integer,\n    uploaded_at timestamp default now(),\n    foreign key (user_id) references users (user_id) on delete cascade\n    );\n\ncreate table if not exists accruals\n(\n    id serial ,\n    order_num varchar(32) primary key,\n    status varchar(10),\n    accrual numeric(12,2),\n    uploaded_at timestamp default now(),\n    foreign key (order_num) references orders (order_num) on delete cascade\n    );\n\ncreate table if not exists withdrawns\n(\n    id serial,\n    order_num varchar(32) primary key,\n    withdrawn numeric(12,2),\n    processed_at timestamp default now(),\n    foreign key (order_num) references orders (order_num) on delete cascade\n    );\n\ncreate table if not exists balance\n(\n    id serial primary key,\n    user_id integer unique,\n    available numeric(12,2) default 0 check (available >= 0),\n    withdrawn numeric(12,2) default 0 check (available >= 0),\n    foreign key (user_id) references users (user_id) on delete cascade\n    );\n\ncreate table if not exists queue\n(\n    id serial primary key,\n    order_num varchar(32) unique,\n    user_id integer,\n    uploaded_at timestamp default now(),\n    last_checked_at timestamp default now()\n    );"
+	sql := "create table if not exists users\n(\n    user_id serial primary key,\n    login varchar(64) unique,\n    pwd char(64),\n    pwd_salt char(64),\n    registered_at timestamp default now()\n);\n\ncreate table if not exists tokens\n(\n    id serial,\n    user_id integer,\n    key_salt char(64),\n    foreign key (user_id) references users (user_id) on delete cascade\n);\n\ncreate table if not exists orders\n(\n    id serial,\n    order_num varchar(32) primary key,\n    user_id integer,\n    uploaded_at timestamp default now(),\n    foreign key (user_id) references users (user_id) on delete cascade\n);\n\ncreate table if not exists accruals\n(\n    id serial ,\n    order_num varchar(32) primary key,\n    status varchar(10),\n    accrual numeric(12,2) default 0,\n    uploaded_at timestamp default now(),\n    foreign key (order_num) references orders (order_num) on delete cascade\n);\n\ncreate table if not exists withdrawns\n(\n    id serial,\n    order_num varchar(32) primary key,\n    withdrawn numeric(12,2),\n    processed_at timestamp default now(),\n    foreign key (order_num) references orders (order_num) on delete cascade\n);\n\ncreate table if not exists balance\n(\n    id serial primary key,\n    user_id integer unique,\n    available numeric(12,2) default 0 check (available >= 0),\n    withdrawn numeric(12,2) default 0 check (withdrawn >= 0),\n    foreign key (user_id) references users (user_id) on delete cascade\n);\n\ncreate table if not exists queue\n(\n    id serial primary key,\n    order_num varchar(32) unique,\n    user_id integer,\n    uploaded_at timestamp default now(),\n    last_checked_at timestamp default now()\n);\n"
 	_, err = pool.Exec(ctx, sql)
 	if err != nil {
 		return pool, err
@@ -105,8 +104,10 @@ func (db *dbT) Login(ctx context.Context, login, password string, cfgApp cfg.Con
 		if err != nil {
 			return "", err
 		}
+		return token, err
+	} else {
+		return "", ErrInvalidLoginPassword
 	}
-	return "", ErrInvalidLoginPassword
 }
 
 // TODO: сделать хранение ключей в БД
@@ -151,9 +152,13 @@ func (db *dbT) PostOrder(ctx context.Context, order string) error {
 	}
 
 	// добавление номера заказов в историю и очередь на начисление баллов
-	sql2 := "insert into accruals (order_num, status) values ($1, $2);" +
-		"insert into queue (order_num, user_id) values ('rrr456', $1);"
-	_, err = db.Pool.Exec(ctx, sql2, order, AccrualRegistered, userID)
+	sql2 := "insert into accruals (order_num, status) values ($1, $2);"
+	_, err = db.Pool.Exec(ctx, sql2, order, AccrualRegistered)
+	if err != nil {
+		return err
+	}
+	sql3 := "insert into queue (order_num, user_id) values ($1, $2);"
+	_, err = db.Pool.Exec(ctx, sql3, order, userID)
 	if err != nil {
 		return err
 	}
@@ -167,7 +172,8 @@ func (db *dbT) PostOrder(ctx context.Context, order string) error {
 func (db *dbT) GetOrders(ctx context.Context) (OrderList, error) {
 	userID := ctx.Value("userID").(int)
 
-	sql := "select order_num, status, accrual, uploaded_at from accruals where order_num in (select order_num from orders where user_id = $1);"
+	//sql := "select order_num, status, accrual, uploaded_at from accruals where order_num in (select order_num from orders where user_id = $1);"
+	sql := "select order_num, status, accrual from accruals where order_num in (select order_num from orders where user_id = $1);"
 	rows, err := db.Pool.Query(ctx, sql, userID)
 	if err != nil {
 		return nil, err
@@ -176,11 +182,11 @@ func (db *dbT) GetOrders(ctx context.Context) (OrderList, error) {
 	res := make(OrderList, 0, 10)
 	item := orderItem{}
 	for rows.Next() {
-		err = rows.Scan(&item.Number, &item.Status, &item.Accrual, item.UploadedAtGo)
+		err = rows.Scan(&item.Number, &item.Status, &item.Accrual)
 		if err != nil {
 			return nil, err
 		}
-		item.UploadedAt = item.UploadedAtGo.Format(time.RFC3339)
+		//item.UploadedAt = item.UploadedAtGo.Format(time.RFC3339)
 		res = append(res, item)
 	}
 	return res, nil
@@ -196,16 +202,49 @@ func (db *dbT) Balance(ctx context.Context) (Balance, error) {
 }
 
 func (db *dbT) WithdrawToOrder(ctx context.Context, order string, sum float64) error {
-	userID := ctx.Value("userID").(int)
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
 
-	sql := "update balance set available = available - $1, withdrawn = withdrawn + $1 where user_id = $2;" +
-		"insert into withdrawns (order_num, withdrawn) values ($3, $1);"
-	_, err := db.Pool.Exec(ctx, sql, sum, userID, order)
+	// добавление заказа в orders. Проверка на уникальность
+	userID := ctx.Value("userID").(int)
+	sql := "insert into orders (order_num, user_id) values ($1, $2)"
+	_, err = db.Pool.Exec(ctx, sql, order, userID)
+
 	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		// конфликт номера заказов. Проверка, какой пользователь сделал заказ ранее
+		if pgErr.Code == pgerrcode.UniqueViolation {
+			return ErrOrderAlreadyExists
+		}
+	}
+	if err != nil {
+		return err
+	}
+
+	// проверка баланса и списание
+	sql2 := "update balance set available = available - $1, withdrawn = withdrawn + $1 where user_id = $2;"
+	_, err = db.Pool.Exec(ctx, sql2, sum, userID)
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == pgerrcode.CheckViolation {
 			return ErrNotEnoughFunds
 		}
+	}
+	if err != nil {
+		return err
+	}
+
+	// занесение в историю списаний
+	sql1 := "insert into withdrawns (order_num, withdrawn) values ($1, $2);"
+	_, err = db.Pool.Exec(ctx, sql1, order, sum)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("unable to commit: %w", err)
 	}
 	return err
 }
@@ -213,7 +252,8 @@ func (db *dbT) WithdrawToOrder(ctx context.Context, order string, sum float64) e
 func (db *dbT) GetWithdrawals(ctx context.Context) (WithdrawalsList, error) {
 	userID := ctx.Value("userID").(int)
 
-	sql := "select order_num, withdrawn, processed_at from withdrawns where order_num in (select order_num from orders where user_id = $1);"
+	//sql := "select order_num, withdrawn, processed_at from withdrawns where order_num in (select order_num from orders where user_id = $1);"
+	sql := "select order_num, withdrawn from withdrawns where order_num in (select order_num from orders where user_id = $1);"
 	rows, err := db.Pool.Query(ctx, sql, userID)
 	if err != nil {
 		return nil, err
@@ -222,11 +262,11 @@ func (db *dbT) GetWithdrawals(ctx context.Context) (WithdrawalsList, error) {
 	res := make(WithdrawalsList, 0, 10)
 	item := withdrawalItem{}
 	for rows.Next() {
-		err = rows.Scan(&item.Order, &item.Sum, &item.ProcessedAtGo)
+		err = rows.Scan(&item.Order, &item.Sum)
 		if err != nil {
 			return nil, err
 		}
-		item.ProcessedAt = item.ProcessedAtGo.Format(time.RFC3339)
+		//item.ProcessedAt = item.ProcessedAtGo.Format(time.RFC3339)
 		res = append(res, item)
 	}
 	return res, nil

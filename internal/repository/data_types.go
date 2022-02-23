@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"github.com/jackc/pgtype"
 	"time"
 )
 
@@ -12,6 +13,7 @@ var (
 	ErrDuplicateOrderNumber              = errors.New("order number already loaded")
 	ErrDuplicateOrderNumberByAnotherUser = errors.New("order number already loaded by another user")
 	ErrNotEnoughFunds                    = errors.New("not enough funds in account")
+	ErrOrderAlreadyExists                = errors.New("order already exists")
 )
 
 // статусы начисления баллов заказам
@@ -24,11 +26,11 @@ var (
 
 type OrderList []orderItem
 type orderItem struct {
-	Number       string    `json:"number"`
-	Status       string    `json:"status"`
-	Accrual      int       `json:"accrual"`
-	UploadedAt   string    `json:"uploaded_at"`
-	UploadedAtGo time.Time `json:"-"`
+	Number       string      `json:"number"`
+	Status       string      `json:"status"`
+	Accrual      int         `json:"accrual"`
+	UploadedAt   string      `json:"uploaded_at"`
+	UploadedAtGo pgtype.Time `json:"-"`
 }
 
 type Balance struct {

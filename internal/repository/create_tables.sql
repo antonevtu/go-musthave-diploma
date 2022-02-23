@@ -3,11 +3,11 @@ drop table if exists users, tokens, orders, accruals, withdrawns, balance, queue
 create table if not exists users
 (
     user_id serial primary key,
-    login varchar(32) unique,
+    login varchar(64) unique,
     pwd char(64),
     pwd_salt char(64),
     registered_at timestamp default now()
-    );
+);
 
 create table if not exists tokens
 (
@@ -15,7 +15,7 @@ create table if not exists tokens
     user_id integer,
     key_salt char(64),
     foreign key (user_id) references users (user_id) on delete cascade
-    );
+);
 
 create table if not exists orders
 (
@@ -24,7 +24,7 @@ create table if not exists orders
     user_id integer,
     uploaded_at timestamp default now(),
     foreign key (user_id) references users (user_id) on delete cascade
-    );
+);
 
 create table if not exists accruals
 (
@@ -34,7 +34,7 @@ create table if not exists accruals
     accrual numeric(12,2) default 0,
     uploaded_at timestamp default now(),
     foreign key (order_num) references orders (order_num) on delete cascade
-    );
+);
 
 create table if not exists withdrawns
 (
@@ -43,16 +43,16 @@ create table if not exists withdrawns
     withdrawn numeric(12,2),
     processed_at timestamp default now(),
     foreign key (order_num) references orders (order_num) on delete cascade
-    );
+);
 
 create table if not exists balance
 (
     id serial primary key,
     user_id integer unique,
     available numeric(12,2) default 0 check (available >= 0),
-    withdrawn numeric(12,2) default 0 check (available >= 0),
+    withdrawn numeric(12,2) default 0 check (withdrawn >= 0),
     foreign key (user_id) references users (user_id) on delete cascade
-    );
+);
 
 create table if not exists queue
 (
@@ -61,7 +61,7 @@ create table if not exists queue
     user_id integer,
     uploaded_at timestamp default now(),
     last_checked_at timestamp default now()
-    );
+);
 
 -- регистрация пользователя
 insert into users (login, pwd, pwd_salt) values('aaa', '123', '987') returning user_id;
@@ -114,3 +114,5 @@ select order_num, withdrawn, processed_at from withdrawns where order_num in (se
 update queue set last_checked_at = default where order_num in (select order_num from queue order by last_checked_at limit 1) returning order_num;
 -- удаление из очереди
 delete from queue where order_num = 'lll456';
+update balance set available = available + 300 where user_id = 1;
+select * from balance;

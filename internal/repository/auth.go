@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
 	"github.com/dgrijalva/jwt-go/v4"
 	"time"
@@ -27,7 +26,7 @@ func NewJwtToken(userId int, cfgApp cfg.Config) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &cl)
 
-	tokenString, err := token.SignedString(cfgApp.SecretKey)
+	tokenString, err := token.SignedString([]byte(cfgApp.SecretKey))
 	if err != nil {
 		panic(err)
 	}
@@ -60,9 +59,9 @@ func ParseToken(accessToken string, signingKey string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if claims1, ok := token.Claims.(jwtClaims); ok && token.Valid {
+	if claims1, ok := token.Claims.(*jwtClaims); ok && token.Valid {
 		return claims1.UserID, nil
 	} else {
-		return 0, errors.New("Unauthorized")
+		return 0, ErrInvalidLoginPassword
 	}
 }

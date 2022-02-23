@@ -8,7 +8,7 @@ import (
 )
 
 type Config struct {
-	RunAddress           string `env:"RUN_ADDRESS" envDefault:"localhost:8080"`
+	RunAddress           string `env:"RUN_ADDRESS" envDefault:"localhost:8081"`
 	DatabaseURI          string `env:"DATABASE_URI"`
 	AccrualSystemAddress string `env:"ACCRUAL_SYSTEM_ADDRESS"`
 
@@ -34,6 +34,10 @@ func New() (Config, error) {
 	})
 	flag.Func("d", "postgres url", func(flagValue string) error {
 		cfg.DatabaseURI = flagValue
+		return nil
+	})
+	flag.Func("r", "accrual system address", func(flagValue string) error {
+		cfg.AccrualSystemAddress = flagValue
 		return nil
 	})
 	flag.Func("t", "context timeout in seconds", func(flagValue string) error {
