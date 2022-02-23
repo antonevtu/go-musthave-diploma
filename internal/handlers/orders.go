@@ -8,7 +8,6 @@ import (
 	"github.com/antonevtu/go-musthave-diploma/internal/repository"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -22,10 +21,7 @@ func postOrder(repo Repositorier, cfgApp cfg.Config) http.Handler {
 			}
 			defer r.Body.Close()
 
-			orderNum, err := strconv.Atoi(string(body))
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-			}
+			orderNum := string(body)
 
 			err = goluhn.Validate(string(body))
 			if err != nil {

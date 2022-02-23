@@ -12,10 +12,10 @@ type Repositorier interface {
 	Register(ctx context.Context, login string, password string, cfgApp cfg.Config) (token string, err error)
 	Login(ctx context.Context, login string, password string, cfgApp cfg.Config) (token string, err error)
 	Authorize(ctx context.Context, token string, cfgApp cfg.Config) (userID int, err error)
-	PostOrder(ctx context.Context, order int) error
+	PostOrder(ctx context.Context, order string) error
 	GetOrders(ctx context.Context) (repository.OrderList, error)
 	Balance(ctx context.Context) (repository.Balance, error)
-	WithdrawToOrder(ctx context.Context, order int, sum float64) error
+	WithdrawToOrder(ctx context.Context, order string, sum float64) error
 	GetWithdrawals(ctx context.Context) (repository.WithdrawalsList, error)
 }
 

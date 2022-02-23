@@ -115,7 +115,7 @@ func (db *dbT) Authorize(ctx context.Context, token string, cfgApp cfg.Config) (
 	return userID, err
 }
 
-func (db *dbT) PostOrder(ctx context.Context, order int) error {
+func (db *dbT) PostOrder(ctx context.Context, order string) error {
 	tx, err := db.Begin(ctx)
 	if err != nil {
 		return err
@@ -195,7 +195,7 @@ func (db *dbT) Balance(ctx context.Context) (Balance, error) {
 	return bal, err
 }
 
-func (db *dbT) WithdrawToOrder(ctx context.Context, order int, sum float64) error {
+func (db *dbT) WithdrawToOrder(ctx context.Context, order string, sum float64) error {
 	userID := ctx.Value("userID").(int)
 
 	sql := "update balance set available = available - $1, withdrawn = withdrawn + $1 where user_id = $2;" +
