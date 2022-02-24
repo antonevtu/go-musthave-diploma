@@ -39,13 +39,13 @@ var (
 func init() {
 	RunAddress = flag.String("a", ":8081", "server address for shorten")
 	DatabaseURI = flag.String("d", "postgres://postgres:5069@localhost:5432/postgres", "base url")
-	AccrualSystemAddress = flag.String("r", "http://localhost:8080", "")
+	AccrualSystemAddress = flag.String("r", "localhost:8080", "")
 	SecretKey = flag.String("k", "SecretKey", "SecretKey")
 	TokenPeriodExpire = flag.Int64("p", 500, "in hours")
 	CtxTimeout = flag.Int64("t", 500, "context timeout")
 }
 
-func TestIntegration(t *testing.T) {
+func TestStatic(t *testing.T) {
 	cfgApp := cfg.Config{
 		RunAddress:           *RunAddress,
 		DatabaseURI:          *DatabaseURI,

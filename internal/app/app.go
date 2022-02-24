@@ -33,9 +33,8 @@ func Run() {
 	repo := &dbPool
 
 	// repository pool for delete items (set flag "deleted")
-	accrualPool := accrual_polling.New(ctx, repo)
+	accrualPool := accrual_polling.New(ctx, repo, cfgApp)
 	defer accrualPool.Close()
-	//cfgApp.DeleterChan = deleterPool.Input
 
 	//r := handlers.NewRouter(repo, cfgApp)
 	r := handlers.NewRouter(repo, cfgApp)

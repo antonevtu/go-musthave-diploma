@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
+	"time"
 )
 
 const hashLen = 32 // SHA256
@@ -27,7 +28,7 @@ func NewDB(ctx context.Context, url string) (DbT, error) {
 	}
 
 	// создание таблиц (см. create_tables.sql)
-	sql := "create table if not exists users\n(\n    user_id serial primary key,\n    login varchar(64) unique,\n    pwd char(64),\n    pwd_salt char(64),\n    registered_at timestamp default now()\n);\n\ncreate table if not exists tokens\n(\n    id serial,\n    user_id integer,\n    key_salt char(64),\n    foreign key (user_id) references users (user_id) on delete cascade\n);\n\ncreate table if not exists orders\n(\n    id serial,\n    order_num varchar(32) primary key,\n    user_id integer,\n    uploaded_at timestamp default now(),\n    foreign key (user_id) references users (user_id) on delete cascade\n);\n\ncreate table if not exists accruals\n(\n    id serial ,\n    order_num varchar(32) primary key,\n    status varchar(10),\n    accrual numeric(12,2) default 0,\n    uploaded_at timestamp default now(),\n    foreign key (order_num) references orders (order_num) on delete cascade\n);\n\ncreate table if not exists withdrawns\n(\n    id serial,\n    order_num varchar(32) primary key,\n    withdrawn numeric(12,2),\n    processed_at timestamp default now(),\n    foreign key (order_num) references orders (order_num) on delete cascade\n);\n\ncreate table if not exists balance\n(\n    id serial primary key,\n    user_id integer unique,\n    available numeric(12,2) default 0 check (available >= 0),\n    withdrawn numeric(12,2) default 0 check (withdrawn >= 0),\n    foreign key (user_id) references users (user_id) on delete cascade\n);\n\ncreate table if not exists queue\n(\n    id serial primary key,\n    order_num varchar(32) unique,\n    user_id integer,\n    uploaded_at timestamp default now(),\n    last_checked_at timestamp default now()\n);\n"
+	sql := "create table if not exists users\n(\n    user_id serial primary key,\n    login varchar(64) unique,\n    pwd char(64),\n    pwd_salt char(64),\n    registered_at timestamp default now()\n);\n\ncreate table if not exists tokens\n(\n    id serial,\n    user_id integer,\n    key_salt char(64),\n    foreign key (user_id) references users (user_id) on delete cascade\n);\n\ncreate table if not exists orders\n(\n    id serial,\n    order_num varchar(32) primary key,\n    user_id integer,\n    uploaded_at timestamp default now(),\n    foreign key (user_id) references users (user_id) on delete cascade\n);\n\ncreate table if not exists accruals\n(\n    id serial ,\n    order_num varchar(32) primary key,\n    status varchar(10),\n    accrual numeric(12,2) default 0,\n    uploaded_at timestamp default now(),\n    foreign key (order_num) references orders (order_num) on delete cascade\n);\n\ncreate table if not exists withdrawns\n(\n    id serial,\n    order_num varchar(32) primary key,\n    withdrawn numeric(12,2),\n    processed_at timestamp default now(),\n    foreign key (order_num) references orders (order_num) on delete cascade\n);\n\ncreate table if not exists balance\n(\n    id serial primary key,\n    user_id integer unique,\n    available numeric(12,2) default 0 check (available >= 0),\n    withdrawn numeric(12,2) default 0 check (withdrawn >= 0),\n    foreign key (user_id) references users (user_id) on delete cascade\n);\n\ncreate table if not exists queue\n(\n    id serial primary key,\n    order_num varchar(32) unique,\n    user_id integer,\n    uploaded_at timestamp default now(),\n    last_checked_at timestamp default now(),\n    in_handling boolean default false\n);\n"
 	_, err = pool.Exec(ctx, sql)
 	if err != nil {
 		return pool, err
@@ -172,8 +173,8 @@ func (db *DbT) PostOrder(ctx context.Context, order string) error {
 func (db *DbT) GetOrders(ctx context.Context) (OrderList, error) {
 	userID := ctx.Value("userID").(int)
 
-	//sql := "select order_num, status, accrual, uploaded_at from accruals where order_num in (select order_num from orders where user_id = $1);"
-	sql := "select order_num, status, accrual from accruals where order_num in (select order_num from orders where user_id = $1);"
+	sql := "select order_num, status, accrual, uploaded_at from accruals where order_num in (select order_num from orders where user_id = $1);"
+	//sql := "select order_num, status, accrual from accruals where order_num in (select order_num from orders where user_id = $1);"
 	rows, err := db.Pool.Query(ctx, sql, userID)
 	if err != nil {
 		return nil, err
@@ -182,11 +183,12 @@ func (db *DbT) GetOrders(ctx context.Context) (OrderList, error) {
 	res := make(OrderList, 0, 10)
 	item := orderItem{}
 	for rows.Next() {
-		err = rows.Scan(&item.Number, &item.Status, &item.Accrual)
+		err = rows.Scan(&item.Number, &item.Status, &item.Accrual, &item.UploadedAtGo)
+		//err = rows.Scan(&item.Number, &item.Status, &item.Accrual)
 		if err != nil {
 			return nil, err
 		}
-		//item.UploadedAt = item.UploadedAtGo.Format(time.RFC3339)
+		item.UploadedAt = item.UploadedAtGo.Format(time.RFC3339)
 		res = append(res, item)
 	}
 	return res, nil
@@ -252,8 +254,7 @@ func (db *DbT) WithdrawToOrder(ctx context.Context, order string, sum float64) e
 func (db *DbT) GetWithdrawals(ctx context.Context) (WithdrawalsList, error) {
 	userID := ctx.Value("userID").(int)
 
-	//sql := "select order_num, withdrawn, processed_at from withdrawns where order_num in (select order_num from orders where user_id = $1);"
-	sql := "select order_num, withdrawn from withdrawns where order_num in (select order_num from orders where user_id = $1);"
+	sql := "select order_num, withdrawn, processed_at from withdrawns where order_num in (select order_num from orders where user_id = $1);"
 	rows, err := db.Pool.Query(ctx, sql, userID)
 	if err != nil {
 		return nil, err
@@ -262,11 +263,11 @@ func (db *DbT) GetWithdrawals(ctx context.Context) (WithdrawalsList, error) {
 	res := make(WithdrawalsList, 0, 10)
 	item := withdrawalItem{}
 	for rows.Next() {
-		err = rows.Scan(&item.Order, &item.Sum)
+		err = rows.Scan(&item.Order, &item.Sum, &item.ProcessedAtGo)
 		if err != nil {
 			return nil, err
 		}
-		//item.ProcessedAt = item.ProcessedAtGo.Format(time.RFC3339)
+		item.ProcessedAt = item.ProcessedAtGo.Format(time.RFC3339)
 		res = append(res, item)
 	}
 	return res, nil

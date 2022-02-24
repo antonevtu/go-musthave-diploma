@@ -10,7 +10,7 @@ import (
 type Config struct {
 	RunAddress           string `env:"RUN_ADDRESS" envDefault:"localhost:8081"`
 	DatabaseURI          string `env:"DATABASE_URI"`
-	AccrualSystemAddress string `env:"ACCRUAL_SYSTEM_ADDRESS"`
+	AccrualSystemAddress string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"localhost:8080"`
 
 	SecretKey         string `env:"SECRET_KEY" envDefault:"secret_key"`
 	TokenPeriodExpire int64  `env:"TOKEN_PERIOD_EXPIRE" envDefault:"240"`

@@ -60,7 +60,8 @@ create table if not exists queue
     order_num varchar(32) unique,
     user_id integer,
     uploaded_at timestamp default now(),
-    last_checked_at timestamp default now()
+    last_checked_at timestamp default now(),
+    in_handling boolean default false
 );
 
 -- регистрация пользователя
@@ -111,8 +112,12 @@ select order_num, withdrawn, processed_at from withdrawns where order_num in (se
 
 ----------- Очередь -------------------
 -- выборка самого старого заказа
-update queue set last_checked_at = default where order_num in (select order_num from queue order by last_checked_at limit 1) returning order_num;
+update queue set last_checked_at = default, in_handling = true
+where order_num in
+      (select order_num from queue order by last_checked_at limit 1) and in_handling = false
+returning order_num;
+
 -- удаление из очереди
 delete from queue where order_num = 'lll456';
 update balance set available = available + 300 where user_id = 1;
-select * from balance;
+select * from queue;
