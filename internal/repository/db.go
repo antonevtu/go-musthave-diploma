@@ -174,7 +174,6 @@ func (db *DbT) GetOrders(ctx context.Context) (OrderList, error) {
 	userID := ctx.Value("userID").(int)
 
 	sql := "select order_num, status, accrual, uploaded_at from accruals where order_num in (select order_num from orders where user_id = $1);"
-	//sql := "select order_num, status, accrual from accruals where order_num in (select order_num from orders where user_id = $1);"
 	rows, err := db.Pool.Query(ctx, sql, userID)
 	if err != nil {
 		return nil, err
@@ -184,7 +183,6 @@ func (db *DbT) GetOrders(ctx context.Context) (OrderList, error) {
 	item := orderItem{}
 	for rows.Next() {
 		err = rows.Scan(&item.Number, &item.Status, &item.Accrual, &item.UploadedAtGo)
-		//err = rows.Scan(&item.Number, &item.Status, &item.Accrual)
 		if err != nil {
 			return nil, err
 		}

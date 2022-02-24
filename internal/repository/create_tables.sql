@@ -113,8 +113,7 @@ select order_num, withdrawn, processed_at from withdrawns where order_num in (se
 ----------- Очередь -------------------
 -- выборка самого старого заказа
 update queue set last_checked_at = default, in_handling = true
-where order_num in
-      (select order_num from queue order by last_checked_at limit 1) and in_handling = false
+where order_num in (select order_num from queue where in_handling = false order by last_checked_at limit 1)
 returning order_num;
 
 -- удаление из очереди
