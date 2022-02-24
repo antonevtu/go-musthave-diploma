@@ -14,12 +14,12 @@ import (
 
 const hashLen = 32 // SHA256
 
-type dbT struct {
+type DbT struct {
 	*pgxpool.Pool
 }
 
-func NewDB(ctx context.Context, url string) (dbT, error) {
-	var pool dbT
+func NewDB(ctx context.Context, url string) (DbT, error) {
+	var pool DbT
 	var err error
 	pool.Pool, err = pgxpool.Connect(ctx, url)
 	if err != nil {
@@ -36,7 +36,7 @@ func NewDB(ctx context.Context, url string) (dbT, error) {
 	return pool, nil
 }
 
-func (db *dbT) Register(ctx context.Context, login, password string, cfgApp cfg.Config) (token string, err error) {
+func (db *DbT) Register(ctx context.Context, login, password string, cfgApp cfg.Config) (token string, err error) {
 	salt, err := RandBytes(hashLen)
 	if err != nil {
 		return "", err
@@ -84,7 +84,7 @@ func (db *dbT) Register(ctx context.Context, login, password string, cfgApp cfg.
 	return token, err
 }
 
-func (db *dbT) Login(ctx context.Context, login, password string, cfgApp cfg.Config) (token string, err error) {
+func (db *DbT) Login(ctx context.Context, login, password string, cfgApp cfg.Config) (token string, err error) {
 	sql := "select user_id, pwd, pwd_salt from users where login = $1"
 	resp := db.Pool.QueryRow(ctx, sql, login)
 
@@ -111,12 +111,12 @@ func (db *dbT) Login(ctx context.Context, login, password string, cfgApp cfg.Con
 }
 
 // TODO: сделать хранение ключей в БД
-func (db *dbT) Authorize(ctx context.Context, token string, cfgApp cfg.Config) (userID int, err error) {
+func (db *DbT) Authorize(ctx context.Context, token string, cfgApp cfg.Config) (userID int, err error) {
 	userID, err = ParseToken(token, cfgApp.SecretKey)
 	return userID, err
 }
 
-func (db *dbT) PostOrder(ctx context.Context, order string) error {
+func (db *DbT) PostOrder(ctx context.Context, order string) error {
 	tx, err := db.Begin(ctx)
 	if err != nil {
 		return err
@@ -169,7 +169,7 @@ func (db *dbT) PostOrder(ctx context.Context, order string) error {
 	return nil
 }
 
-func (db *dbT) GetOrders(ctx context.Context) (OrderList, error) {
+func (db *DbT) GetOrders(ctx context.Context) (OrderList, error) {
 	userID := ctx.Value("userID").(int)
 
 	//sql := "select order_num, status, accrual, uploaded_at from accruals where order_num in (select order_num from orders where user_id = $1);"
@@ -192,7 +192,7 @@ func (db *dbT) GetOrders(ctx context.Context) (OrderList, error) {
 	return res, nil
 }
 
-func (db *dbT) Balance(ctx context.Context) (Balance, error) {
+func (db *DbT) Balance(ctx context.Context) (Balance, error) {
 	userID := ctx.Value("userID").(int)
 	sql := "select available, withdrawn from balance where user_id = $1"
 	resp := db.Pool.QueryRow(ctx, sql, userID)
@@ -201,7 +201,7 @@ func (db *dbT) Balance(ctx context.Context) (Balance, error) {
 	return bal, err
 }
 
-func (db *dbT) WithdrawToOrder(ctx context.Context, order string, sum float64) error {
+func (db *DbT) WithdrawToOrder(ctx context.Context, order string, sum float64) error {
 	tx, err := db.Begin(ctx)
 	if err != nil {
 		return err
@@ -249,7 +249,7 @@ func (db *dbT) WithdrawToOrder(ctx context.Context, order string, sum float64) e
 	return err
 }
 
-func (db *dbT) GetWithdrawals(ctx context.Context) (WithdrawalsList, error) {
+func (db *DbT) GetWithdrawals(ctx context.Context) (WithdrawalsList, error) {
 	userID := ctx.Value("userID").(int)
 
 	//sql := "select order_num, withdrawn, processed_at from withdrawns where order_num in (select order_num from orders where user_id = $1);"

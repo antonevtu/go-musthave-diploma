@@ -14,6 +14,7 @@ var (
 	ErrDuplicateOrderNumberByAnotherUser = errors.New("order number already loaded by another user")
 	ErrNotEnoughFunds                    = errors.New("not enough funds in account")
 	ErrOrderAlreadyExists                = errors.New("order already exists")
+	ErrEmptyQueue                        = errors.New("queue is empty")
 )
 
 // статусы начисления баллов заказам
