@@ -3,11 +3,13 @@ package accrual_polling
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
 	"github.com/antonevtu/go-musthave-diploma/internal/repository"
 	"golang.org/x/sync/errgroup"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -25,7 +27,7 @@ type PollT struct {
 type Poller interface {
 	OldestFromQueue(ctx context.Context) (order string, err error)
 	DeferOrder(ctx context.Context, order, status string) error
-	FinalizeOrder(ctx context.Context, order, status string) error
+	FinalizeOrder(ctx context.Context, order, status string, accrual float64) error
 }
 
 func New(ctx context.Context, repo Poller, cfgApp cfg.Config) PollT {
@@ -40,7 +42,7 @@ func New(ctx context.Context, repo Poller, cfgApp cfg.Config) PollT {
 		serviceAddr: cfgApp.AccrualSystemAddress + "/api/orders/",
 	}
 	go poll.RunWorkers(repo)
-	go poll.RunProd(repo)
+	go poll.RunProducer(repo)
 	return poll
 }
 
@@ -52,7 +54,7 @@ func (p PollT) RunWorkers(repo Poller) {
 			for {
 				select {
 				case order := <-p.ProdChan:
-					err := p.processOrderAccrual(order)
+					err := p.processOrderAccrual(repo, order)
 					if err != nil {
 						return err
 					}
@@ -68,7 +70,7 @@ func (p PollT) RunWorkers(repo Poller) {
 	}
 }
 
-func (p PollT) RunProd(repo Poller) {
+func (p PollT) RunProducer(repo Poller) {
 	p.g.Go(func() error {
 		for {
 			select {
@@ -76,12 +78,14 @@ func (p PollT) RunProd(repo Poller) {
 				return nil
 			default:
 				order, err := repo.OldestFromQueue(p.ctx)
-				if errors.Is(err, repository.ErrEmptyQueue) {
-					time.Sleep(3 * time.Second)
-				} else if err != nil {
+				if err == nil {
+					p.ProdChan <- order
+				} else if errors.Is(err, repository.ErrEmptyQueue) {
+					fmt.Println("Ожидание 1с")
+					time.Sleep(1 * time.Second)
+				} else {
 					return err
 				}
-				p.ProdChan <- order
 			}
 		}
 	})
@@ -102,7 +106,7 @@ type serviceResponce struct {
 	Accrual float64 `json:"accrual"`
 }
 
-func (p PollT) processOrderAccrual(order string) error {
+func (p PollT) processOrderAccrual(repo Poller, order string) error {
 
 	// make request to service
 	client := &http.Client{}
@@ -115,6 +119,24 @@ func (p PollT) processOrderAccrual(order string) error {
 		return err
 	}
 	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	res := serviceResponce{}
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		return err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+
+	case http.StatusTooManyRequests:
+
+	case http.StatusInternalServerError:
+
+	}
 
 	return nil
 }
