@@ -131,7 +131,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-
+		_ = order
 	case http.StatusTooManyRequests:
 
 	case http.StatusInternalServerError:
