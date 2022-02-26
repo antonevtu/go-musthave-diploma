@@ -24,7 +24,7 @@ var (
 	AccrualProcessed  = "PROCESSED"
 )
 
-type UserIDKeyT string
+type UserIDKeyT struct{ string }
 
 const UserIDKey = "userID"
 
