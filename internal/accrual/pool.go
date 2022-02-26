@@ -81,8 +81,8 @@ func (p PollT) RunProducer(repo Poller) {
 				if err == nil {
 					p.ProdChan <- order
 				} else if errors.Is(err, repository.ErrEmptyQueue) {
-					fmt.Println("Ожидание 1с")
-					time.Sleep(1 * time.Second)
+					//fmt.Println("Ожидание 1с")
+					time.Sleep(100 * time.Millisecond)
 				} else {
 					return err
 				}
