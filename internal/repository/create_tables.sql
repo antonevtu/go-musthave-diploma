@@ -30,7 +30,7 @@ create table if not exists accruals
 (
     id serial ,
     order_num varchar(32) primary key,
-    status varchar(10),
+    status varchar(16),
     accrual numeric(12,2) default 0,
     uploaded_at timestamp default now(),
     foreign key (order_num) references orders (order_num) on delete cascade
