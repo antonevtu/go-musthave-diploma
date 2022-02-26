@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v4"
+	"log"
 )
 
 func (db *DBT) OldestFromQueue(ctx context.Context) (order string, err error) {
@@ -48,6 +49,7 @@ func (db *DBT) FinalizeOrder(ctx context.Context, order, status string, accrual 
 		return err
 	}
 	defer tx.Rollback(ctx)
+	log.Println("finalize:", order, status, accrual)
 
 	sql := "delete from queue where order_num = $1 returning user_id"
 	resp := db.Pool.QueryRow(ctx, sql, order)
@@ -56,18 +58,21 @@ func (db *DBT) FinalizeOrder(ctx context.Context, order, status string, accrual 
 	if err != nil {
 		return err
 	}
+	log.Println("deleted from queue")
 
 	sql1 := "update accruals set status = $1, accrual = $2 where order_num = $3"
 	_, err = db.Pool.Exec(ctx, sql1, status, accrual, order)
 	if err != nil {
 		return err
 	}
+	log.Println("updated accruals")
 
 	sql2 := "update balance set available = available + $1 where user_id = $2"
 	_, err = db.Pool.Exec(ctx, sql2, accrual, userID)
 	if err != nil {
 		return err
 	}
+	log.Println("updated balance")
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("unable to commit: %w", err)
