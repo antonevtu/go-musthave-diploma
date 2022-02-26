@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
 	"github.com/antonevtu/go-musthave-diploma/internal/handlers"
 	"github.com/antonevtu/go-musthave-diploma/internal/repository"
@@ -117,7 +118,7 @@ func TestStatic(t *testing.T) {
 	respBody, err = ioutil.ReadAll(resp.Body)
 	require.NoError(t, err)
 	resp.Body.Close()
-	_ = respBody
+	fmt.Println(string(respBody))
 
 	// аутентификация пользователя успешная
 	client = &http.Client{}

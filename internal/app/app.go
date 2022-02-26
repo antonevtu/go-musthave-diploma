@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	"github.com/antonevtu/go-musthave-diploma/internal/accrual_polling"
+	"github.com/antonevtu/go-musthave-diploma/internal/accrual"
 	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
 	"github.com/antonevtu/go-musthave-diploma/internal/handlers"
 	"github.com/antonevtu/go-musthave-diploma/internal/repository"
@@ -33,7 +33,7 @@ func Run() {
 	repo := &dbPool
 
 	// repository pool for delete items (set flag "deleted")
-	accrualPool := accrual_polling.New(ctx, repo, cfgApp)
+	accrualPool := accrual.New(ctx, repo, cfgApp)
 	defer accrualPool.Close()
 	//cfgApp.DeleterChan = deleterPool.Input
 
@@ -64,8 +64,8 @@ func Run() {
 	select {
 	case <-signalChan:
 		log.Println("os.Interrupt - shutting down...")
-		//case err := <-deleterPool.ErrCh:
-		//	log.Println(err)
+	case err := <-accrualPool.ErrCh:
+		log.Println(err)
 	}
 	cancel()
 

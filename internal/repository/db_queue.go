@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
-func (db *DbT) OldestFromQueue(ctx context.Context) (order string, err error) {
+func (db *DBT) OldestFromQueue(ctx context.Context) (order string, err error) {
 	sql := "update queue set last_checked_at = default, in_handling = true\nwhere order_num in (select order_num from queue where in_handling = false order by last_checked_at limit 1)\nreturning order_num;"
 	resp := db.Pool.QueryRow(ctx, sql)
 	err = resp.Scan(&order)
@@ -17,7 +17,7 @@ func (db *DbT) OldestFromQueue(ctx context.Context) (order string, err error) {
 	return order, err
 }
 
-func (db *DbT) DeferOrder(ctx context.Context, order, status string) error {
+func (db *DBT) DeferOrder(ctx context.Context, order, status string) error {
 	tx, err := db.Begin(ctx)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func (db *DbT) DeferOrder(ctx context.Context, order, status string) error {
 	return nil
 }
 
-func (db *DbT) FinalizeOrder(ctx context.Context, order, status string, accrual float64) error {
+func (db *DBT) FinalizeOrder(ctx context.Context, order, status string, accrual float64) error {
 	tx, err := db.Begin(ctx)
 	if err != nil {
 		return err
@@ -51,9 +51,6 @@ func (db *DbT) FinalizeOrder(ctx context.Context, order, status string, accrual 
 
 	sql := "delete from queue where order_num = $1 returning user_id"
 	resp := db.Pool.QueryRow(ctx, sql, order)
-	if err != nil {
-		return err
-	}
 	var userID int
 	err = resp.Scan(&userID)
 	if err != nil {

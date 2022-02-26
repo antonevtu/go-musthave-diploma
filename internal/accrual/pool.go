@@ -1,4 +1,4 @@
-package accrual_polling
+package accrual
 
 import (
 	"bytes"

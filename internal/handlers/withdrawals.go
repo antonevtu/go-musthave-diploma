@@ -28,6 +28,10 @@ func getBalance(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, err = w.Write(js)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
@@ -94,6 +98,10 @@ func getWithdrawals(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, err = w.Write(js)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 
 		} else {
 			w.WriteHeader(http.StatusNoContent)

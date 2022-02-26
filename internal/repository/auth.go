@@ -15,13 +15,13 @@ type jwtClaims struct {
 	UserID int `json:"user_id"`
 }
 
-func NewJwtToken(userId int, cfgApp cfg.Config) (string, error) {
+func NewJwtToken(userID int, cfgApp cfg.Config) (string, error) {
 	cl := jwtClaims{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: jwt.At(time.Now().Add(time.Duration(cfgApp.TokenPeriodExpire) * time.Hour)),
 			IssuedAt:  jwt.At(time.Now()),
 		},
-		UserID: userId,
+		UserID: userID,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &cl)
