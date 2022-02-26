@@ -119,6 +119,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		return err
 	}
 	defer resp.Body.Close()
+	log.Println("----Запрошены баллы по заказу:", order)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
@@ -132,7 +133,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 			return err
 		}
 
-		log.Println("----", string(body))
+		log.Println("----Пришел ответ по заказу:", order, ":", string(body))
 		log.Println("----", res)
 
 		if (res.Status == repository.AccrualInvalid) || (res.Status == repository.AccrualProcessed) {

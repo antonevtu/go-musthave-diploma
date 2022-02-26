@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
+	"log"
 	"time"
 )
 
@@ -167,6 +168,8 @@ func (db *DBT) PostOrder(ctx context.Context, order string) error {
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("unable to commit: %w", err)
 	}
+
+	log.Println("Принят заказ:", order, "userID:", userID)
 	return nil
 }
 
