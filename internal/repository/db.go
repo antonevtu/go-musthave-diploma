@@ -176,8 +176,6 @@ func (db *DBT) PostOrder(ctx context.Context, order string) error {
 func (db *DBT) GetOrders(ctx context.Context) (OrderList, error) {
 	userID := ctx.Value(UserIDKey).(int)
 
-	log.Println("====Пришел запрос на заказы пользователя:", userID)
-
 	sql := "select order_num, status, accrual, uploaded_at from accruals where order_num in (select order_num from orders where user_id = $1);"
 	rows, err := db.Pool.Query(ctx, sql, userID)
 	if err != nil {

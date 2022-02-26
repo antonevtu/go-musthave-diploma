@@ -120,7 +120,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	log.Println("----Запрошены баллы по заказу:", order)
+	log.Println("Запрошены баллы по заказу:", order)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
@@ -134,7 +134,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 			return err
 		}
 
-		log.Println("----Пришел ответ 200 по заказу:", order, ":", string(body))
+		log.Println("Пришел ответ 200 по заказу:", order, ":", string(body))
 
 		if (res.Status == repository.AccrualInvalid) || (res.Status == repository.AccrualProcessed) {
 			err = repo.FinalizeOrder(p.ctx, order, res.Status, res.Accrual)
@@ -149,7 +149,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		}
 
 	case http.StatusTooManyRequests:
-		log.Println("----Пришел ответ 429 по заказу:", order)
+		log.Println("Пришел ответ 429 по заказу:", order)
 		err := repo.DeferOrder(p.ctx, order, "")
 		if err != nil {
 			return err
@@ -157,14 +157,14 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		time.Sleep(60 * time.Second)
 
 	case http.StatusInternalServerError:
-		log.Println("----Пришел ответ 500 по заказу:", order)
+		log.Println("Пришел ответ 500 по заказу:", order)
 		err := repo.DeferOrder(p.ctx, order, "")
 		if err != nil {
 			return err
 		}
 
 	default:
-		log.Println("----Пришел ответ ", resp.StatusCode, " по заказу:", order)
+		log.Println("Пришел ответ ", resp.StatusCode, " по заказу:", order)
 		err := repo.DeferOrder(p.ctx, order, "")
 		if err != nil {
 			return err
