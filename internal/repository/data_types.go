@@ -18,7 +18,7 @@ var (
 
 // статусы начисления баллов заказам
 var (
-	AccrualRegistered = "REGISTERED"
+	AccrualNew        = "NEW"
 	AccrualInvalid    = "INVALID"
 	AccrualProcessing = "PROCESSING"
 	AccrualProcessed  = "PROCESSED"

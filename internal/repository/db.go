@@ -154,7 +154,7 @@ func (db *DBT) PostOrder(ctx context.Context, order string) error {
 
 	// добавление номера заказов в историю и очередь на начисление баллов
 	sql2 := "insert into accruals (order_num, status) values ($1, $2);"
-	_, err = db.Pool.Exec(ctx, sql2, order, AccrualRegistered)
+	_, err = db.Pool.Exec(ctx, sql2, order, AccrualNew)
 	if err != nil {
 		return err
 	}
