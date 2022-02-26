@@ -62,7 +62,10 @@ func getOrders(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 		}
 
 		if len(orderList) > 0 {
-			orderList = orderList[:1]
+			if len(orderList) == 2 {
+				orderList = orderList[1:2]
+			}
+
 			js, err := json.Marshal(orderList)
 			if err != nil {
 				log.Println("=====2", err)
