@@ -30,11 +30,11 @@ func (db *DBT) DeferOrder(ctx context.Context, order, status string) error {
 		return err
 	}
 
-	sql1 := "update accruals set status = $1 where order_num = $2;"
-	_, err = db.Pool.Exec(ctx, sql1, status, order)
-	if err != nil {
-		return err
-	}
+	//sql1 := "update accruals set status = $1 where order_num = $2;"
+	//_, err = db.Pool.Exec(ctx, sql1, status, order)
+	//if err != nil {
+	//	return err
+	//}
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("unable to commit: %w", err)

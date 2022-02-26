@@ -119,23 +119,36 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	res := serviceResponce{}
-	err = json.Unmarshal(body, &res)
-	if err != nil {
-		return err
-	}
 
 	switch resp.StatusCode {
 	case http.StatusOK:
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		res := serviceResponce{}
+		err = json.Unmarshal(body, &res)
+		if err != nil {
+			return err
+		}
+
+		err = repo.FinalizeOrder(p.ctx, order, res.Status, res.Accrual)
+		if err != nil {
+			return err
+		}
 
 	case http.StatusTooManyRequests:
+		err := repo.DeferOrder(p.ctx, order, "")
+		if err != nil {
+			return err
+		}
+		time.Sleep(60 * time.Second)
 
-	case http.StatusInternalServerError:
-
+	default:
+		err := repo.DeferOrder(p.ctx, order, "")
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
