@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
-	"log"
 	"time"
 )
 
@@ -185,7 +184,6 @@ func (db *DBT) GetOrders(ctx context.Context) (OrderList, error) {
 	for rows.Next() {
 		err = rows.Scan(&item.Number, &item.Status, &item.Accrual, &item.UploadedAtGo)
 		if err != nil {
-			log.Println(userID, "db0:", err)
 			return nil, err
 		}
 		item.UploadedAt = item.UploadedAtGo.Format(time.RFC3339)
