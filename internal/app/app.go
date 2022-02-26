@@ -65,7 +65,7 @@ func Run() {
 	case <-signalChan:
 		log.Println("os.Interrupt - shutting down...")
 	case err := <-accrualPool.ErrCh:
-		log.Println(err)
+		log.Println("Exit error=======", err)
 	}
 	cancel()
 
