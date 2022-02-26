@@ -24,9 +24,11 @@ var (
 	AccrualProcessed  = "PROCESSED"
 )
 
-type UserIDKeyT struct{ string }
+type UserIDKeyT string
 
-const UserIDKey = "userID"
+const (
+	UserIDKey UserIDKeyT = "userID"
+)
 
 type OrderList []orderItem
 type orderItem struct {
