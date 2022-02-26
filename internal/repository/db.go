@@ -185,7 +185,7 @@ func (db *DBT) GetOrders(ctx context.Context) (OrderList, error) {
 	for rows.Next() {
 		err = rows.Scan(&item.Number, &item.Status, &item.Accrual, &item.UploadedAtGo)
 		if err != nil {
-			log.Println("db0:", err)
+			log.Println(userID, "db0:", err)
 			return nil, err
 		}
 		item.UploadedAt = item.UploadedAtGo.Format(time.RFC3339)
