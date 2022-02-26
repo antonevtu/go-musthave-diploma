@@ -132,9 +132,16 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 			return err
 		}
 
-		err = repo.FinalizeOrder(p.ctx, order, res.Status, res.Accrual)
-		if err != nil {
-			return err
+		if (res.Status == repository.AccrualInvalid) || (res.Status == repository.AccrualProcessed) {
+			err = repo.FinalizeOrder(p.ctx, order, res.Status, res.Accrual)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := repo.DeferOrder(p.ctx, order, "")
+			if err != nil {
+				return err
+			}
 		}
 
 	case http.StatusTooManyRequests:
