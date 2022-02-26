@@ -24,6 +24,10 @@ var (
 	AccrualProcessed  = "PROCESSED"
 )
 
+type UserIDKeyT string
+
+const UserIDKey = "userID"
+
 type OrderList []orderItem
 type orderItem struct {
 	Number       string    `json:"number"`

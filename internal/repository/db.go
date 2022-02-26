@@ -125,7 +125,7 @@ func (db *DBT) PostOrder(ctx context.Context, order string) error {
 	defer tx.Rollback(ctx)
 
 	// добавление заказа в orders. Проверка на уникальность
-	userID := ctx.Value("userID").(int)
+	userID := ctx.Value(UserIDKey).(int)
 	sql := "insert into orders (order_num, user_id) values ($1, $2)"
 	_, err = db.Pool.Exec(ctx, sql, order, userID)
 
@@ -171,7 +171,7 @@ func (db *DBT) PostOrder(ctx context.Context, order string) error {
 }
 
 func (db *DBT) GetOrders(ctx context.Context) (OrderList, error) {
-	userID := ctx.Value("userID").(int)
+	userID := ctx.Value(UserIDKey).(int)
 
 	sql := "select order_num, status, accrual, uploaded_at from accruals where order_num in (select order_num from orders where user_id = $1);"
 	rows, err := db.Pool.Query(ctx, sql, userID)
@@ -193,7 +193,7 @@ func (db *DBT) GetOrders(ctx context.Context) (OrderList, error) {
 }
 
 func (db *DBT) Balance(ctx context.Context) (Balance, error) {
-	userID := ctx.Value("userID").(int)
+	userID := ctx.Value(UserIDKey).(int)
 	sql := "select available, withdrawn from balance where user_id = $1"
 	resp := db.Pool.QueryRow(ctx, sql, userID)
 	bal := Balance{}
@@ -209,7 +209,7 @@ func (db *DBT) WithdrawToOrder(ctx context.Context, order string, sum float64) e
 	defer tx.Rollback(ctx)
 
 	// добавление заказа в orders. Проверка на уникальность
-	userID := ctx.Value("userID").(int)
+	userID := ctx.Value(UserIDKey).(int)
 	sql := "insert into orders (order_num, user_id) values ($1, $2)"
 	_, err = db.Pool.Exec(ctx, sql, order, userID)
 
@@ -250,7 +250,7 @@ func (db *DBT) WithdrawToOrder(ctx context.Context, order string, sum float64) e
 }
 
 func (db *DBT) GetWithdrawals(ctx context.Context) (WithdrawalsList, error) {
-	userID := ctx.Value("userID").(int)
+	userID := ctx.Value(UserIDKey).(int)
 
 	sql := "select order_num, withdrawn, processed_at from withdrawns where order_num in (select order_num from orders where user_id = $1);"
 	rows, err := db.Pool.Query(ctx, sql, userID)

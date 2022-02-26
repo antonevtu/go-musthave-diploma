@@ -127,7 +127,7 @@ func middlewareAuth(next http.Handler, repo Repositorier, cfgApp cfg.Config) htt
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-		ctx := context.WithValue(r.Context(), "userID", userID)
+		ctx := context.WithValue(r.Context(), repository.UserIDKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }

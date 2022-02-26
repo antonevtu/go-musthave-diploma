@@ -83,9 +83,9 @@ func TestStatic(t *testing.T) {
 	cookiesTrue1 := resp.Cookies()
 	_ = cookiesTrue1
 	respBody, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
-	_ = respBody
 
 	// повторная регистрация пользователя (логин занят, 409)
 	client = &http.Client{}
@@ -114,11 +114,10 @@ func TestStatic(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	cookiesTrue2 := resp.Cookies()
-	_ = cookiesTrue2
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
-	fmt.Println(string(respBody))
 
 	// аутентификация пользователя успешная
 	client = &http.Client{}
@@ -130,6 +129,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -147,6 +147,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 401, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -164,6 +165,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 401, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -180,6 +182,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 202, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -194,6 +197,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -208,6 +212,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 409, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -224,6 +229,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 202, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -237,6 +243,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -250,6 +257,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 204, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -263,6 +271,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -287,6 +296,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -307,6 +317,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 402, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -320,6 +331,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -333,6 +345,7 @@ func TestStatic(t *testing.T) {
 	require.Equal(t, 204, resp.StatusCode)
 	cookies = resp.Cookies()
 	respBody, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	require.NoError(t, err)
 	resp.Body.Close()
 }
