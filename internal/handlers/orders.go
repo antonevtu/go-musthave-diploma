@@ -27,6 +27,7 @@ func postOrder(repo Repositorier, cfgApp cfg.Config) http.Handler {
 			err = goluhn.Validate(string(body))
 			if err != nil {
 				http.Error(w, "luhn validation failed", http.StatusUnprocessableEntity)
+				return
 			}
 
 			err = repo.PostOrder(r.Context(), orderNum)
