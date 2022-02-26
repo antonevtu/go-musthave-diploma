@@ -132,6 +132,9 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 			return err
 		}
 
+		log.Println("----", string(body))
+		log.Println("----", res)
+
 		if (res.Status == repository.AccrualInvalid) || (res.Status == repository.AccrualProcessed) {
 			err = repo.FinalizeOrder(p.ctx, order, res.Status, res.Accrual)
 			if err != nil {
