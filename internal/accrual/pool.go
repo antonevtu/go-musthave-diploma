@@ -77,6 +77,7 @@ func (p PollT) RunProducer(repo Poller) {
 			case <-p.ctx.Done():
 				return nil
 			default:
+				time.Sleep(100 * time.Millisecond)
 				order, err := repo.OldestFromQueue(p.ctx)
 				if err == nil {
 					p.ProdChan <- order
