@@ -155,8 +155,15 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		}
 		time.Sleep(60 * time.Second)
 
+	case http.StatusInternalServerError:
+		log.Println("----Пришел ответ 500 по заказу:", order)
+		err := repo.DeferOrder(p.ctx, order, "")
+		if err != nil {
+			return err
+		}
+
 	default:
-		log.Println("----Пришел ответ default по заказу:", order)
+		log.Println("----Пришел ответ ", resp.StatusCode, " по заказу:", order)
 		err := repo.DeferOrder(p.ctx, order, "")
 		if err != nil {
 			return err
