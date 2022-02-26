@@ -63,7 +63,7 @@ func getOrders(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 
 		if len(orderList) > 0 {
 			js, err := json.Marshal(orderList)
-			log.Println("2:", js, "err:", err)
+			log.Println("2:", string(js), "err:", err)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

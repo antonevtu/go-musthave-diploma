@@ -34,7 +34,7 @@ type OrderList []orderItem
 type orderItem struct {
 	Number       string    `json:"number"`
 	Status       string    `json:"status"`
-	Accrual      int       `json:"accrual"`
+	Accrual      float64   `json:"accrual"`
 	UploadedAt   string    `json:"uploaded_at"`
 	UploadedAtGo time.Time `json:"-"`
 }
