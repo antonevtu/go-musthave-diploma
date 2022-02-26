@@ -133,8 +133,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 			return err
 		}
 
-		log.Println("----Пришел ответ по заказу:", order, ":", string(body))
-		log.Println("----", res)
+		log.Println("----Пришел ответ 200 по заказу:", order, ":", string(body))
 
 		if (res.Status == repository.AccrualInvalid) || (res.Status == repository.AccrualProcessed) {
 			err = repo.FinalizeOrder(p.ctx, order, res.Status, res.Accrual)
@@ -149,6 +148,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		}
 
 	case http.StatusTooManyRequests:
+		log.Println("----Пришел ответ 429 по заказу:", order)
 		err := repo.DeferOrder(p.ctx, order, "")
 		if err != nil {
 			return err
@@ -156,6 +156,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		time.Sleep(60 * time.Second)
 
 	default:
+		log.Println("----Пришел ответ default по заказу:", order)
 		err := repo.DeferOrder(p.ctx, order, "")
 		if err != nil {
 			return err
