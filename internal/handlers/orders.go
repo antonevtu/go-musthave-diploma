@@ -7,6 +7,7 @@ import (
 	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
 	"github.com/antonevtu/go-musthave-diploma/internal/repository"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -54,6 +55,7 @@ func postOrder(repo Repositorier, cfgApp cfg.Config) http.Handler {
 func getOrders(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		orderList, err := repo.GetOrders(r.Context())
+		log.Println("1:", orderList)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -67,6 +69,7 @@ func getOrders(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
+			log.Println("2", string(js))
 			_, err = w.Write(js)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
