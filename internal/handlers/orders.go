@@ -56,6 +56,7 @@ func getOrders(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		orderList, err := repo.GetOrders(r.Context())
 		if err != nil {
+			log.Println("=====1", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -63,14 +64,16 @@ func getOrders(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 		if len(orderList) > 0 {
 			js, err := json.Marshal(orderList)
 			if err != nil {
+				log.Println("=====2", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			log.Println("=====", string(js))
+			log.Println("=====3", string(js))
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, err = w.Write(js)
 			if err != nil {
+				log.Println("=====4", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
