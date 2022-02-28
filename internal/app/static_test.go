@@ -212,8 +212,7 @@ func TestStatic(t *testing.T) {
 	resp.Body.Close()
 
 	// загрузка второго нового номера заказа
-	//order2 := []byte("5404361051028451")
-	order2 := []byte("12345678902")
+	order2 := []byte("5404361051028451")
 
 	client = &http.Client{}
 	req, err = http.NewRequest(http.MethodPost, ts.URL+"/api/user/orders", bytes.NewBuffer(order2))
