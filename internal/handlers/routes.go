@@ -9,14 +9,15 @@ import (
 )
 
 type Repositorier interface {
-	Register(ctx context.Context, login string, password string, cfgApp cfg.Config) (token string, err error)
-	Login(ctx context.Context, login string, password string, cfgApp cfg.Config) (token string, err error)
+	Register(ctx context.Context, user repository.RegisterNewUser) (userID int, err error)
+	Login(ctx context.Context, login string) (user repository.LoginUser, err error)
+	UpdateTokenKey(ctx context.Context, userID int, key string) (err error)
 	Authorize(ctx context.Context, token string, cfgApp cfg.Config) (userID int, err error)
-	PostOrder(ctx context.Context, order string) error
-	GetOrders(ctx context.Context) (repository.OrderList, error)
-	Balance(ctx context.Context) (repository.Balance, error)
-	WithdrawToOrder(ctx context.Context, order string, sum float64) error
-	GetWithdrawals(ctx context.Context) (repository.WithdrawalsList, error)
+	PostOrder(ctx context.Context, userID int, order string) error
+	GetOrders(ctx context.Context, userID int) (repository.OrderList, error)
+	Balance(ctx context.Context, userID int) (repository.Balance, error)
+	WithdrawToOrder(ctx context.Context, userID int, order string, sum float64) error
+	GetWithdrawals(ctx context.Context, userID int) (repository.WithdrawalsList, error)
 }
 
 func NewRouter(repo Repositorier, cfgApp cfg.Config) chi.Router {

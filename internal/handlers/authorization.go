@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/antonevtu/go-musthave-diploma/internal/auth"
 	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
 	"github.com/antonevtu/go-musthave-diploma/internal/repository"
 	"io"
@@ -15,6 +16,7 @@ import (
 const minLoginLength = 4
 const maxLoginLength = 64
 const minPasswordLength = 4
+const hashLen = 32 // SHA256
 
 var secretKey = []byte("abc")
 
@@ -46,12 +48,38 @@ func register(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 				return
 			}
 
+			// hashes
+			pwdSalt, err := auth.RandBytes(hashLen)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			pwdHash := auth.ToHash(req.Password, cfgApp.SecretKey, pwdSalt)
+			JWTSalt, err := auth.RandBytes(hashLen)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
 			// register in repository
-			token, err := repo.Register(r.Context(), req.Login, req.Password, cfgApp)
+			reg := repository.RegisterNewUser{
+				Login:   req.Login,
+				PwdHash: pwdHash,
+				PwdSalt: pwdSalt,
+				JWTSalt: JWTSalt,
+			}
+			userID, err := repo.Register(r.Context(), reg)
 			if errors.Is(err, repository.ErrLoginBusy) {
 				http.Error(w, err.Error(), http.StatusConflict)
 				return
 			}
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// JWT-token
+			token, err := auth.NewJwtToken(userID, cfgApp.SecretKey+JWTSalt, cfgApp.TokenPeriodExpire)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -86,16 +114,42 @@ func login(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 
 			// check login, password for length, special symbols
 			if !correctLoginPassword(req) {
-				http.Error(w, "invalid login or password length", http.StatusBadRequest)
+				http.Error(w, "invalid login or password", http.StatusUnauthorized)
 				return
 			}
 
-			// authentication in repository
-			token, err := repo.Login(r.Context(), req.Login, req.Password, cfgApp)
-			if errors.Is(err, repository.ErrInvalidLoginPassword) {
+			// find user in repository
+			user, err := repo.Login(r.Context(), req.Login)
+			if errors.Is(err, repository.ErrUnknownLogin) {
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// check user password
+			pwdHash := auth.ToHash(req.Password, cfgApp.SecretKey, user.PwdSalt)
+			if pwdHash != user.PwdHash {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			// generate token
+			JWTSalt, err := auth.RandBytes(hashLen)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			token, err := auth.NewJwtToken(user.UserID, cfgApp.SecretKey+JWTSalt, cfgApp.TokenPeriodExpire)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// save JWTSalt
+			err = repo.UpdateTokenKey(r.Context(), user.UserID, JWTSalt)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -112,6 +166,12 @@ func login(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 	}
 }
 
+type UserIDKeyT string
+
+const (
+	UserIDKey UserIDKeyT = "userID"
+)
+
 func middlewareAuth(next http.Handler, repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tokenString, err := extractToken(r)
@@ -119,15 +179,16 @@ func middlewareAuth(next http.Handler, repo Repositorier, cfgApp cfg.Config) htt
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		userID, err := repo.Authorize(r.Context(), tokenString, cfgApp)
-		if errors.Is(err, repository.ErrInvalidLoginPassword) {
+		userID, err := auth.ParseToken(tokenString, cfgApp.SecretKey)
+
+		if errors.Is(err, auth.ErrInvalidLoginPassword) {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-		ctx := context.WithValue(r.Context(), repository.UserIDKey, userID)
+		ctx := context.WithValue(r.Context(), UserIDKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }

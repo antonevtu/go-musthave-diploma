@@ -12,7 +12,7 @@ create table if not exists users
 create table if not exists tokens
 (
     id serial,
-    user_id integer,
+    user_id integer primary key,
     key_salt char(64),
     foreign key (user_id) references users (user_id) on delete cascade
 );
@@ -120,3 +120,9 @@ returning order_num;
 delete from queue where order_num = 'lll456';
 update balance set available = available + 300 where user_id = 1;
 select * from queue;
+
+-- пароли для токенов
+insert into tokens (user_id, key_salt) values (2, 'sfdg');
+update tokens set key_salt = 'erty' where user_id = 1;
+select key_salt from tokens where user_id = 1;
+select * from tokens

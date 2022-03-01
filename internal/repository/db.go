@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
@@ -13,8 +12,6 @@ import (
 	"log"
 	"time"
 )
-
-const hashLen = 32 // SHA256
 
 type DBT struct {
 	*pgxpool.Pool
@@ -38,87 +35,77 @@ func NewDB(ctx context.Context, url string) (DBT, error) {
 	return pool, nil
 }
 
-func (db *DBT) Register(ctx context.Context, login, password string, cfgApp cfg.Config) (token string, err error) {
-	salt, err := RandBytes(hashLen)
-	if err != nil {
-		return "", err
-	}
-
-	pwdHash := ToHash(password, cfgApp.SecretKey, salt)
-
+func (db *DBT) Register(ctx context.Context, user RegisterNewUser) (userID int, err error) {
 	tx, err := db.Begin(ctx)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 	defer tx.Rollback(ctx)
 
 	// добавление пользователя в users
 	sql := "insert into users (login, pwd, pwd_salt) values($1, $2, $3) returning user_id"
-	resp := db.Pool.QueryRow(ctx, sql, login, pwdHash, salt)
+	resp := db.Pool.QueryRow(ctx, sql, user.Login, user.PwdHash, user.PwdSalt)
 
-	var userID int
 	var pgErr *pgconn.PgError
 
 	err = resp.Scan(&userID)
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == pgerrcode.UniqueViolation {
-			return "", ErrLoginBusy
+			return 0, ErrLoginBusy
 		}
 	} else if err != nil {
-		return "", err
+		return 0, err
 	}
 
 	// добавление баланса пользователя в balance
 	sql1 := "insert into balance (user_id) values ($1);"
 	_, err = db.Pool.Exec(ctx, sql1, userID)
 	if err != nil {
-		return "", err
+		return 0, err
+	}
+
+	// добавление ключа jwt-токена в tokens
+	sql2 := "insert into tokens (user_id, key_salt) values ($1, $2);"
+	_, err = db.Pool.Exec(ctx, sql2, userID)
+	if err != nil {
+		return 0, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return "", fmt.Errorf("unable to commit: %w", err)
+		return 0, fmt.Errorf("unable to commit: %w", err)
 	}
 
-	token, err = NewJwtToken(userID, cfgApp)
-	if err != nil {
-		return "", err
-	}
-	return token, err
-}
-
-func (db *DBT) Login(ctx context.Context, login, password string, cfgApp cfg.Config) (token string, err error) {
-	sql := "select user_id, pwd, pwd_salt from users where login = $1"
-	resp := db.Pool.QueryRow(ctx, sql, login)
-
-	var userID int
-	var pwdBase, salt string
-	err = resp.Scan(&userID, &pwdBase, &salt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", ErrInvalidLoginPassword
-	}
-	if err != nil {
-		return "", err
-	}
-
-	pwdHash := ToHash(password, cfgApp.SecretKey, salt)
-	if pwdHash == pwdBase {
-		token, err = NewJwtToken(userID, cfgApp)
-		if err != nil {
-			return "", err
-		}
-		return token, err
-	} else {
-		return "", ErrInvalidLoginPassword
-	}
-}
-
-// TODO: сделать хранение ключей в БД
-func (db *DBT) Authorize(ctx context.Context, token string, cfgApp cfg.Config) (userID int, err error) {
-	userID, err = ParseToken(token, cfgApp.SecretKey)
 	return userID, err
 }
 
-func (db *DBT) PostOrder(ctx context.Context, order string) error {
+func (db *DBT) Login(ctx context.Context, login string) (user LoginUser, err error) {
+	sql := "select user_id, pwd, pwd_salt from users where login = $1"
+	resp := db.Pool.QueryRow(ctx, sql, login)
+	err = resp.Scan(&user.UserID, &user.PwdHash, &user.PwdSalt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return user, ErrUnknownLogin
+	}
+	if err != nil {
+		return user, err
+	}
+
+	return user, nil
+}
+
+func (db *DBT) UpdateTokenKey(ctx context.Context, userID int, key string) (err error) {
+	sql := "update tokens set key_salt = $1 where user_id = $2;"
+	_, err = db.Pool.Exec(ctx, sql, userID, key)
+	return err
+}
+
+func (db *DBT) GetTokenKey(ctx context.Context, userID int) (key string, err error) {
+	sql := "select key_salt from tokens where user_id = $1;"
+	resp := db.Pool.QueryRow(ctx, sql, userID)
+	err = resp.Scan(&key)
+	return key, err
+}
+
+func (db *DBT) PostOrder(ctx context.Context, userID int, order string) error {
 	tx, err := db.Begin(ctx)
 	if err != nil {
 		return err
@@ -126,7 +113,6 @@ func (db *DBT) PostOrder(ctx context.Context, order string) error {
 	defer tx.Rollback(ctx)
 
 	// добавление заказа в orders. Проверка на уникальность
-	userID := ctx.Value(UserIDKey).(int)
 	sql := "insert into orders (order_num, user_id) values ($1, $2)"
 	_, err = db.Pool.Exec(ctx, sql, order, userID)
 
@@ -173,8 +159,7 @@ func (db *DBT) PostOrder(ctx context.Context, order string) error {
 	return nil
 }
 
-func (db *DBT) GetOrders(ctx context.Context) (OrderList, error) {
-	userID := ctx.Value(UserIDKey).(int)
+func (db *DBT) GetOrders(ctx context.Context, userID int) (OrderList, error) {
 
 	sql := "select order_num, status, accrual, uploaded_at from accruals where order_num in (select order_num from orders where user_id = $1);"
 	rows, err := db.Pool.Query(ctx, sql, userID)
@@ -195,8 +180,7 @@ func (db *DBT) GetOrders(ctx context.Context) (OrderList, error) {
 	return res, nil
 }
 
-func (db *DBT) Balance(ctx context.Context) (Balance, error) {
-	userID := ctx.Value(UserIDKey).(int)
+func (db *DBT) Balance(ctx context.Context, userID int) (Balance, error) {
 	sql := "select available, withdrawn from balance where user_id = $1"
 	resp := db.Pool.QueryRow(ctx, sql, userID)
 	bal := Balance{}
@@ -204,7 +188,7 @@ func (db *DBT) Balance(ctx context.Context) (Balance, error) {
 	return bal, err
 }
 
-func (db *DBT) WithdrawToOrder(ctx context.Context, order string, sum float64) error {
+func (db *DBT) WithdrawToOrder(ctx context.Context, userID int, order string, sum float64) error {
 	tx, err := db.Begin(ctx)
 	if err != nil {
 		return err
@@ -212,7 +196,6 @@ func (db *DBT) WithdrawToOrder(ctx context.Context, order string, sum float64) e
 	defer tx.Rollback(ctx)
 
 	// добавление заказа в orders. Проверка на уникальность
-	userID := ctx.Value(UserIDKey).(int)
 	sql := "insert into orders (order_num, user_id) values ($1, $2)"
 	_, err = db.Pool.Exec(ctx, sql, order, userID)
 
@@ -252,8 +235,7 @@ func (db *DBT) WithdrawToOrder(ctx context.Context, order string, sum float64) e
 	return err
 }
 
-func (db *DBT) GetWithdrawals(ctx context.Context) (WithdrawalsList, error) {
-	userID := ctx.Value(UserIDKey).(int)
+func (db *DBT) GetWithdrawals(ctx context.Context, userID int) (WithdrawalsList, error) {
 
 	sql := "select order_num, withdrawn, processed_at from withdrawns where order_num in (select order_num from orders where user_id = $1);"
 	rows, err := db.Pool.Query(ctx, sql, userID)

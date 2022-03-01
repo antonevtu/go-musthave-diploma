@@ -29,7 +29,8 @@ func postOrder(repo Repositorier, cfgApp cfg.Config) http.Handler {
 				return
 			}
 
-			err = repo.PostOrder(r.Context(), orderNum)
+			userID := r.Context().Value(UserIDKey).(int)
+			err = repo.PostOrder(r.Context(), userID, orderNum)
 			if errors.Is(err, repository.ErrDuplicateOrderNumber) {
 				w.WriteHeader(http.StatusOK)
 				return
@@ -54,21 +55,22 @@ func postOrder(repo Repositorier, cfgApp cfg.Config) http.Handler {
 
 func getOrders(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		orderList, err := repo.GetOrders(r.Context())
+		userID := r.Context().Value(UserIDKey).(int)
+		orderList, err := repo.GetOrders(r.Context(), userID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		if len(orderList) > 0 {
-			js, err := json.Marshal(orderList)
+			data, err := json.Marshal(orderList)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_, err = w.Write(js)
+			_, err = w.Write(data)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

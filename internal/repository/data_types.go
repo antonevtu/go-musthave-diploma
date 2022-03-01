@@ -8,7 +8,7 @@ import (
 // ошибки обращения к репозиторию
 var (
 	ErrLoginBusy                         = errors.New("login is busy")
-	ErrInvalidLoginPassword              = errors.New("invalid login/password pair")
+	ErrUnknownLogin                      = errors.New("unknown login")
 	ErrDuplicateOrderNumber              = errors.New("order number already loaded")
 	ErrDuplicateOrderNumberByAnotherUser = errors.New("order number already loaded by another user")
 	ErrNotEnoughFunds                    = errors.New("not enough funds in account")
@@ -24,11 +24,18 @@ var (
 	AccrualProcessed  = "PROCESSED"
 )
 
-type UserIDKeyT string
+type RegisterNewUser struct {
+	Login   string
+	PwdHash string
+	PwdSalt string
+	JWTSalt string
+}
 
-const (
-	UserIDKey UserIDKeyT = "userID"
-)
+type LoginUser struct {
+	UserID  int
+	PwdHash string
+	PwdSalt string
+}
 
 type OrderList []orderItem
 type orderItem struct {

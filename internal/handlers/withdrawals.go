@@ -13,13 +13,14 @@ import (
 
 func getBalance(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		bal, err := repo.Balance(r.Context())
+		userID := r.Context().Value(UserIDKey).(int)
+		bal, err := repo.Balance(r.Context(), userID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		js, err := json.Marshal(bal)
+		data, err := json.Marshal(bal)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -27,7 +28,7 @@ func getBalance(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, err = w.Write(js)
+		_, err = w.Write(data)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -62,7 +63,8 @@ func withdrawToOrder(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 				http.Error(w, "luhn validation failed", http.StatusUnprocessableEntity)
 			}
 
-			err = repo.WithdrawToOrder(r.Context(), req.Order, req.Sum)
+			userID := r.Context().Value(UserIDKey).(int)
+			err = repo.WithdrawToOrder(r.Context(), userID, req.Order, req.Sum)
 			if errors.Is(err, repository.ErrNotEnoughFunds) {
 				http.Error(w, err.Error(), http.StatusPaymentRequired)
 			}
@@ -83,21 +85,22 @@ func withdrawToOrder(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 
 func getWithdrawals(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		wl, err := repo.GetWithdrawals(r.Context())
+		userID := r.Context().Value(UserIDKey).(int)
+		wl, err := repo.GetWithdrawals(r.Context(), userID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		if len(wl) > 0 {
-			js, err := json.Marshal(wl)
+			data, err := json.Marshal(wl)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_, err = w.Write(js)
+			_, err = w.Write(data)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

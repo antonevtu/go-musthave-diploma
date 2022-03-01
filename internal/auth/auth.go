@@ -1,11 +1,11 @@
-package repository
+package auth
 
 import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
+	"errors"
 	"github.com/dgrijalva/jwt-go/v4"
 	"time"
 )
@@ -15,10 +15,12 @@ type jwtClaims struct {
 	UserID int `json:"user_id"`
 }
 
-func NewJwtToken(userID int, cfgApp cfg.Config) (string, error) {
+var ErrInvalidLoginPassword = errors.New("invalid login/password pair")
+
+func NewJwtToken(userID int, secretKey string, tokenPeriodExpire int64) (string, error) {
 	cl := jwtClaims{
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: jwt.At(time.Now().Add(time.Duration(cfgApp.TokenPeriodExpire) * time.Hour)),
+			ExpiresAt: jwt.At(time.Now().Add(time.Duration(tokenPeriodExpire) * time.Hour)),
 			IssuedAt:  jwt.At(time.Now()),
 		},
 		UserID: userID,
@@ -26,7 +28,7 @@ func NewJwtToken(userID int, cfgApp cfg.Config) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &cl)
 
-	tokenString, err := token.SignedString([]byte(cfgApp.SecretKey))
+	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		panic(err)
 	}
@@ -52,6 +54,7 @@ func RandBytes(n int) (string, error) {
 }
 
 func ParseToken(accessToken string, signingKey string) (int, error) {
+
 	claims := new(jwtClaims)
 	token, err := jwt.ParseWithClaims(accessToken, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(signingKey), nil
