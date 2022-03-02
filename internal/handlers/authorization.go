@@ -187,6 +187,10 @@ func middlewareAuth(next http.Handler, repo Repositorier, cfgApp cfg.Config) htt
 		}
 
 		salt, err := repo.GetTokenKey(r.Context(), userID)
+		if err != nil {
+			http.Error(w, "bad cookie", http.StatusUnauthorized)
+			return
+		}
 
 		_, err = auth.ParseToken(tokenString, cfgApp.SecretKey+salt)
 
