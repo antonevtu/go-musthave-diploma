@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
 	"github.com/antonevtu/go-musthave-diploma/internal/handlers"
+	"github.com/antonevtu/go-musthave-diploma/internal/logger"
 	"github.com/antonevtu/go-musthave-diploma/internal/repository"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -55,7 +57,13 @@ func TestStatic(t *testing.T) {
 		TokenPeriodExpire:    *TokenPeriodExpire,
 		CtxTimeout:           *CtxTimeout,
 	}
-	ctx := context.Background()
+
+	zLog, err := logger.New(0)
+	if err != nil {
+		log.Fatal(err)
+	}
+	zLog.Infow("starting service...")
+	ctx := context.WithValue(context.Background(), logger.Z, zLog)
 
 	// локальная БД
 	dbPool, err := repository.NewDB(context.Background(), *DatabaseURI)

@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/antonevtu/go-musthave-diploma/internal/logger"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
-	"log"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -155,7 +156,8 @@ func (db *DBT) PostOrder(ctx context.Context, userID int, order string) error {
 		return fmt.Errorf("unable to commit: %w", err)
 	}
 
-	log.Println("Принят заказ:", order, "userID:", userID)
+	zLog := ctx.Value(logger.Z).(*zap.SugaredLogger)
+	zLog.Debugw("Принят заказ:", order, "userID:", userID)
 	return nil
 }
 

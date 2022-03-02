@@ -5,6 +5,7 @@ import (
 	"github.com/antonevtu/go-musthave-diploma/internal/accrual"
 	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
 	"github.com/antonevtu/go-musthave-diploma/internal/handlers"
+	"github.com/antonevtu/go-musthave-diploma/internal/logger"
 	"github.com/antonevtu/go-musthave-diploma/internal/repository"
 	"log"
 	"net"
@@ -16,28 +17,33 @@ import (
 )
 
 func Run() {
-	var cfgApp, err = cfg.New()
+	zLog, err := logger.New(0)
 	if err != nil {
 		log.Fatal(err)
+	}
+	zLog.Infow("starting service...")
+
+	cfgApp, err := cfg.New()
+	if err != nil {
+		zLog.Fatal(err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	ctx = context.WithValue(ctx, logger.Z, zLog)
 
 	// database
 	dbPool, err := repository.NewDB(ctx, cfgApp.DatabaseURI)
 	if err != nil {
-		log.Fatal(err)
+		zLog.Fatal(err)
 	}
 	defer dbPool.Close()
 	repo := &dbPool
 
-	// repository pool for delete items (set flag "deleted")
+	// accrual pool
 	accrualPool := accrual.New(ctx, repo, cfgApp)
 	defer accrualPool.Close()
-	//cfgApp.DeleterChan = deleterPool.Input
 
-	//r := handlers.NewRouter(repo, cfgApp)
 	r := handlers.NewRouter(repo, cfgApp)
 	httpServer := &http.Server{
 		Addr:        cfgApp.RunAddress,
@@ -48,7 +54,7 @@ func Run() {
 	// Run server
 	go func() {
 		if err := httpServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatalf("HTTP server ListenAndServe: %v", err)
+			zLog.Fatalf("HTTP server ListenAndServe: %v", err)
 		}
 	}()
 
@@ -63,9 +69,9 @@ func Run() {
 
 	select {
 	case <-signalChan:
-		log.Println("os.Interrupt - shutting down...")
+		zLog.Infow("os.Interrupt - shutting down...")
 	case err := <-accrualPool.ErrCh:
-		log.Println("Exit error=======", err)
+		zLog.Infow(err.Error())
 	}
 	cancel()
 
@@ -73,8 +79,8 @@ func Run() {
 	defer cancelShutdown()
 
 	if err = httpServer.Shutdown(gracefulCtx); err != nil {
-		log.Printf("shutdown error: %v\n", err)
+		zLog.Infow("shutdown error: %v\n", err)
 	} else {
-		log.Printf("web server gracefully stopped\n")
+		zLog.Infow("web server gracefully stopped")
 	}
 }

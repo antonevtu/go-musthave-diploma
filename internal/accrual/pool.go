@@ -7,10 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
+	"github.com/antonevtu/go-musthave-diploma/internal/logger"
 	"github.com/antonevtu/go-musthave-diploma/internal/repository"
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"io"
-	"log"
 	"net/http"
 	"time"
 )
@@ -81,7 +82,6 @@ func (p PollT) RunProducer(repo Poller) {
 				if err == nil {
 					p.ProdChan <- order
 				} else if errors.Is(err, repository.ErrEmptyQueue) {
-					//fmt.Println("Ожидание 1с")
 					time.Sleep(100 * time.Millisecond)
 				} else {
 					return err
@@ -97,7 +97,8 @@ func (p PollT) RunProducer(repo Poller) {
 
 func (p PollT) Close() {
 	_ = p.g.Wait()
-	log.Println("accrual pool has closed")
+	zLog := p.ctx.Value(logger.Z).(*zap.SugaredLogger)
+	zLog.Infow("accrual pool has closed")
 }
 
 type serviceResponce struct {
@@ -107,6 +108,7 @@ type serviceResponce struct {
 }
 
 func (p PollT) processOrderAccrual(repo Poller, order string) error {
+	zLog := p.ctx.Value(logger.Z).(*zap.SugaredLogger)
 
 	// make request to service
 	client := &http.Client{}
@@ -119,7 +121,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	log.Println("Запрошены баллы по заказу:", order)
+	zLog.Debugw("Запрошены баллы по заказу:", "order", order)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
@@ -133,7 +135,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 			return err
 		}
 
-		log.Println("Пришел ответ 200 по заказу:", order, ":", string(body))
+		zLog.Debugw("Пришел ответ 200 по заказу:", "order", order, "body", string(body))
 
 		if (res.Status == repository.AccrualInvalid) || (res.Status == repository.AccrualProcessed) {
 			err = repo.FinalizeOrder(p.ctx, order, res.Status, res.Accrual)
@@ -148,7 +150,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		}
 
 	case http.StatusTooManyRequests:
-		log.Println("Пришел ответ 429 по заказу:", order)
+		zLog.Debugw("Пришел ответ 429 по заказу:", "order", order)
 		err := repo.DeferOrder(p.ctx, order, "")
 		if err != nil {
 			return err
@@ -156,14 +158,14 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		time.Sleep(60 * time.Second)
 
 	case http.StatusInternalServerError:
-		log.Println("Пришел ответ 500 по заказу:", order)
+		zLog.Debugw("Пришел ответ 500 по заказу:", "order", order)
 		err := repo.DeferOrder(p.ctx, order, "")
 		if err != nil {
 			return err
 		}
 
 	default:
-		log.Println("Пришел ответ ", resp.StatusCode, " по заказу:", order)
+		zLog.Debugw("Пришел ответ по заказу", "status_code", resp.StatusCode, "order", order)
 		err := repo.DeferOrder(p.ctx, order, "")
 		if err != nil {
 			return err
