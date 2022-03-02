@@ -4,14 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/antonevtu/go-musthave-diploma/internal/logger"
 	"github.com/jackc/pgx/v4"
-	"go.uber.org/zap"
 )
 
 func (db *DBT) OldestFromQueue(ctx context.Context) (order string, err error) {
 	sql := "update queue set last_checked_at = default, in_handling = true\nwhere order_num in (select order_num from queue where in_handling = false order by last_checked_at limit 1)\nreturning order_num;"
-	resp := db.Pool.QueryRow(ctx, sql)
+	resp := db.pool.QueryRow(ctx, sql)
 	err = resp.Scan(&order)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrEmptyQueue
@@ -20,20 +18,20 @@ func (db *DBT) OldestFromQueue(ctx context.Context) (order string, err error) {
 }
 
 func (db *DBT) DeferOrder(ctx context.Context, order, status string) error {
-	tx, err := db.Begin(ctx)
+	tx, err := db.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
 	sql := "update queue set in_handling = false where order_num = $1"
-	_, err = db.Pool.Exec(ctx, sql, order)
+	_, err = db.pool.Exec(ctx, sql, order)
 	if err != nil {
 		return err
 	}
 
 	//sql1 := "update accruals set status = $1 where order_num = $2;"
-	//_, err = db.Pool.Exec(ctx, sql1, status, order)
+	//_, err = db.pool.Exec(ctx, sql1, status, order)
 	//if err != nil {
 	//	return err
 	//}
@@ -45,37 +43,35 @@ func (db *DBT) DeferOrder(ctx context.Context, order, status string) error {
 }
 
 func (db *DBT) FinalizeOrder(ctx context.Context, order, status string, accrual float64) error {
-	zLog := ctx.Value(logger.Z).(*zap.SugaredLogger)
-
-	tx, err := db.Begin(ctx)
+	tx, err := db.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
-	zLog.Debugw("finalize accrual", "order", order, "status", status, "accrual", accrual)
+	db.log.Debugw("finalize accrual", "order", order, "status", status, "accrual", accrual)
 
 	sql := "delete from queue where order_num = $1 returning user_id"
-	resp := db.Pool.QueryRow(ctx, sql, order)
+	resp := db.pool.QueryRow(ctx, sql, order)
 	var userID int
 	err = resp.Scan(&userID)
 	if err != nil {
 		return err
 	}
-	zLog.Debugw("deleted from queue")
+	db.log.Debugw("deleted from queue")
 
 	sql1 := "update accruals set status = $1, accrual = $2 where order_num = $3"
-	_, err = db.Pool.Exec(ctx, sql1, status, accrual, order)
+	_, err = db.pool.Exec(ctx, sql1, status, accrual, order)
 	if err != nil {
 		return err
 	}
-	zLog.Debugw("updated accruals")
+	db.log.Debugw("updated accruals")
 
 	sql2 := "update balance set available = available + $1 where user_id = $2"
-	_, err = db.Pool.Exec(ctx, sql2, accrual, userID)
+	_, err = db.pool.Exec(ctx, sql2, accrual, userID)
 	if err != nil {
 		return err
 	}
-	zLog.Debugw("updated balance")
+	db.log.Debugw("updated balance")
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("unable to commit: %w", err)

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/antonevtu/go-musthave-diploma/internal/cfg"
-	"github.com/antonevtu/go-musthave-diploma/internal/logger"
 	"github.com/antonevtu/go-musthave-diploma/internal/repository"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -23,6 +22,7 @@ type PollT struct {
 	db          interface{}
 	ErrCh       chan error
 	serviceAddr string
+	log         *zap.SugaredLogger
 }
 
 type Poller interface {
@@ -31,7 +31,7 @@ type Poller interface {
 	FinalizeOrder(ctx context.Context, order, status string, accrual float64) error
 }
 
-func New(ctx context.Context, repo Poller, cfgApp cfg.Config) PollT {
+func New(ctx context.Context, repo Poller, cfgApp cfg.Config, zapLog *zap.SugaredLogger) PollT {
 	prodChan := make(chan string, 1)
 	g, ctx := errgroup.WithContext(ctx)
 	errCh := make(chan error)
@@ -41,6 +41,7 @@ func New(ctx context.Context, repo Poller, cfgApp cfg.Config) PollT {
 		ctx:         ctx,
 		ErrCh:       errCh,
 		serviceAddr: cfgApp.AccrualSystemAddress + "/api/orders/",
+		log:         zapLog,
 	}
 	go poll.RunWorkers(repo)
 	go poll.RunProducer(repo)
@@ -97,8 +98,7 @@ func (p PollT) RunProducer(repo Poller) {
 
 func (p PollT) Close() {
 	_ = p.g.Wait()
-	zLog := p.ctx.Value(logger.Z).(*zap.SugaredLogger)
-	zLog.Infow("accrual pool has closed")
+	p.log.Infow("accrual pool has closed")
 }
 
 type serviceResponce struct {
@@ -108,8 +108,6 @@ type serviceResponce struct {
 }
 
 func (p PollT) processOrderAccrual(repo Poller, order string) error {
-	zLog := p.ctx.Value(logger.Z).(*zap.SugaredLogger)
-
 	// make request to service
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodGet, p.serviceAddr+order, bytes.NewBufferString(""))
@@ -121,7 +119,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	zLog.Debugw("Запрошены баллы по заказу:", "order", order)
+	p.log.Debugw("Запрошены баллы по заказу:", "order", order)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
@@ -135,7 +133,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 			return err
 		}
 
-		zLog.Debugw("Пришел ответ 200 по заказу:", "order", order, "body", string(body))
+		p.log.Debugw("Пришел ответ 200 по заказу:", "order", order, "body", string(body))
 
 		if (res.Status == repository.AccrualInvalid) || (res.Status == repository.AccrualProcessed) {
 			err = repo.FinalizeOrder(p.ctx, order, res.Status, res.Accrual)
@@ -150,7 +148,7 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		}
 
 	case http.StatusTooManyRequests:
-		zLog.Debugw("Пришел ответ 429 по заказу:", "order", order)
+		p.log.Debugw("Пришел ответ 429 по заказу:", "order", order)
 		err := repo.DeferOrder(p.ctx, order, "")
 		if err != nil {
 			return err
@@ -158,14 +156,14 @@ func (p PollT) processOrderAccrual(repo Poller, order string) error {
 		time.Sleep(60 * time.Second)
 
 	case http.StatusInternalServerError:
-		zLog.Debugw("Пришел ответ 500 по заказу:", "order", order)
+		p.log.Debugw("Пришел ответ 500 по заказу:", "order", order)
 		err := repo.DeferOrder(p.ctx, order, "")
 		if err != nil {
 			return err
 		}
 
 	default:
-		zLog.Debugw("Пришел ответ по заказу", "status_code", resp.StatusCode, "order", order)
+		p.log.Debugw("Пришел ответ по заказу", "status_code", resp.StatusCode, "order", order)
 		err := repo.DeferOrder(p.ctx, order, "")
 		if err != nil {
 			return err

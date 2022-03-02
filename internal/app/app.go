@@ -30,10 +30,9 @@ func Run() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ctx = context.WithValue(ctx, logger.Z, zLog)
 
 	// database
-	dbPool, err := repository.NewDB(ctx, cfgApp.DatabaseURI)
+	dbPool, err := repository.NewDB(ctx, cfgApp.DatabaseURI, zLog)
 	if err != nil {
 		zLog.Fatal(err)
 	}
@@ -41,7 +40,7 @@ func Run() {
 	repo := &dbPool
 
 	// accrual pool
-	accrualPool := accrual.New(ctx, repo, cfgApp)
+	accrualPool := accrual.New(ctx, repo, cfgApp, zLog)
 	defer accrualPool.Close()
 
 	r := handlers.NewRouter(repo, cfgApp)

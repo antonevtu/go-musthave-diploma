@@ -7,12 +7,6 @@ import (
 	"os"
 )
 
-type zapLoggerString string
-
-const (
-	Z zapLoggerString = "z"
-)
-
 func New(logLevel int) (sugarLogger *zap.SugaredLogger, err error) {
 	var level zapcore.Level
 	switch logLevel {
