@@ -156,8 +156,11 @@ func (db *DBT) PostOrder(ctx context.Context, userID int, order string) error {
 		return fmt.Errorf("unable to commit: %w", err)
 	}
 
-	zLog := ctx.Value(logger.Z).(*zap.SugaredLogger)
-	zLog.Debugw("Принят заказ:", order, "userID:", userID)
+	zLog0 := ctx.Value(logger.Z)
+	if zLog0 != nil {
+		zLog := zLog0.(*zap.SugaredLogger)
+		zLog.Debugw("Принят заказ:", order, "userID:", userID)
+	}
 	return nil
 }
 
