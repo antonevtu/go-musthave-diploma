@@ -5,8 +5,10 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"github.com/dgrijalva/jwt-go/v4"
+	"strings"
 	"time"
 )
 
@@ -67,4 +69,15 @@ func ParseToken(accessToken string, signingKey string) (int, error) {
 	} else {
 		return 0, ErrInvalidLoginPassword
 	}
+}
+
+func ExtractUserID(accessToken string) (int, error) {
+	tokenSplit := strings.Split(accessToken, ".")
+	claimsString, err := jwt.DecodeSegment(tokenSplit[1])
+	if err != nil {
+		return 0, err
+	}
+	claims := jwtClaims{}
+	err = json.Unmarshal(claimsString, &claims)
+	return claims.UserID, err
 }

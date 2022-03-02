@@ -66,7 +66,7 @@ func (db *DBT) Register(ctx context.Context, user RegisterNewUser) (userID int, 
 
 	// добавление ключа jwt-токена в tokens
 	sql2 := "insert into tokens (user_id, key_salt) values ($1, $2);"
-	_, err = db.Pool.Exec(ctx, sql2, userID)
+	_, err = db.Pool.Exec(ctx, sql2, userID, user.JWTSalt)
 	if err != nil {
 		return 0, err
 	}
@@ -94,7 +94,7 @@ func (db *DBT) Login(ctx context.Context, login string) (user LoginUser, err err
 
 func (db *DBT) UpdateTokenKey(ctx context.Context, userID int, key string) (err error) {
 	sql := "update tokens set key_salt = $1 where user_id = $2;"
-	_, err = db.Pool.Exec(ctx, sql, userID, key)
+	_, err = db.Pool.Exec(ctx, sql, key, userID)
 	return err
 }
 

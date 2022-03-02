@@ -12,7 +12,7 @@ type Repositorier interface {
 	Register(ctx context.Context, user repository.RegisterNewUser) (userID int, err error)
 	Login(ctx context.Context, login string) (user repository.LoginUser, err error)
 	UpdateTokenKey(ctx context.Context, userID int, key string) (err error)
-	Authorize(ctx context.Context, token string, cfgApp cfg.Config) (userID int, err error)
+	GetTokenKey(ctx context.Context, userID int) (key string, err error)
 	PostOrder(ctx context.Context, userID int, order string) error
 	GetOrders(ctx context.Context, userID int) (repository.OrderList, error)
 	Balance(ctx context.Context, userID int) (repository.Balance, error)

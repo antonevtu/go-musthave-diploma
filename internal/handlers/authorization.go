@@ -121,7 +121,7 @@ func login(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 			// find user in repository
 			user, err := repo.Login(r.Context(), req.Login)
 			if errors.Is(err, repository.ErrUnknownLogin) {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
+				http.Error(w, "invalid login or password", http.StatusUnauthorized)
 				return
 			}
 			if err != nil {
@@ -132,7 +132,7 @@ func login(repo Repositorier, cfgApp cfg.Config) http.HandlerFunc {
 			// check user password
 			pwdHash := auth.ToHash(req.Password, cfgApp.SecretKey, user.PwdSalt)
 			if pwdHash != user.PwdHash {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
+				http.Error(w, "invalid login or password", http.StatusUnauthorized)
 				return
 			}
 
@@ -176,10 +176,19 @@ func middlewareAuth(next http.Handler, repo Repositorier, cfgApp cfg.Config) htt
 	return func(w http.ResponseWriter, r *http.Request) {
 		tokenString, err := extractToken(r)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			http.Error(w, "bad cookie", http.StatusUnauthorized)
 			return
 		}
-		userID, err := auth.ParseToken(tokenString, cfgApp.SecretKey)
+
+		userID, err := auth.ExtractUserID(tokenString)
+		if err != nil {
+			http.Error(w, "bad cookie", http.StatusUnauthorized)
+			return
+		}
+
+		salt, err := repo.GetTokenKey(r.Context(), userID)
+
+		_, err = auth.ParseToken(tokenString, cfgApp.SecretKey+salt)
 
 		if errors.Is(err, auth.ErrInvalidLoginPassword) {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
