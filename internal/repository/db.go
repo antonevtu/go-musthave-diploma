@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"embed"
 	"errors"
 	"fmt"
 	"github.com/jackc/pgconn"
@@ -9,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
+	"github.com/pressly/goose/v3"
 	"go.uber.org/zap"
 	"time"
 )
@@ -17,6 +20,9 @@ type DBT struct {
 	pool *pgxpool.Pool
 	log  *zap.SugaredLogger
 }
+
+//go:embed migrations/*.sql
+var embedMigrations embed.FS
 
 func NewDB(ctx context.Context, url string, zapLog *zap.SugaredLogger) (DBT, error) {
 	var db DBT
@@ -27,8 +33,26 @@ func NewDB(ctx context.Context, url string, zapLog *zap.SugaredLogger) (DBT, err
 	}
 	db.log = zapLog
 
-	err = db.CreateTables(ctx)
+	err = createTablesGoose(url)
+	//err = db.CreateTables(ctx)
 	return db, err
+}
+
+func createTablesGoose(url string) error {
+	db, err := sql.Open("postgres", url+"?sslmode=disable")
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	goose.SetBaseFS(embedMigrations)
+	if err := goose.SetDialect("postgres"); err != nil {
+		return err
+	}
+	if err := goose.Up(db, "migrations"); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (db *DBT) Close() {
