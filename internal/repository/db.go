@@ -46,7 +46,7 @@ func NewDB(ctx context.Context, url string, zapLog *zap.SugaredLogger, drop bool
 }
 
 func createTablesGoose(url string) error {
-	db, err := sql.Open("postgres", url+"?sslmode=disable")
+	db, err := sql.Open("postgres", url)
 	if err != nil {
 		return err
 	}
