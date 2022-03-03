@@ -66,7 +66,7 @@ func TestStatic(t *testing.T) {
 	ctx := context.Background()
 
 	// локальная БД
-	db, err := repository.NewDB(context.Background(), *DatabaseURI, zLog, true)
+	db, err := repository.NewDB(context.Background(), *DatabaseURI, zLog, false)
 	assert.Equal(t, err, nil)
 	//err = db.DropTables(ctx)
 	//require.NoError(t, err)
