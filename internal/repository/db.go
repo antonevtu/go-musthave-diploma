@@ -24,7 +24,7 @@ type DBT struct {
 //go:embed migrations/*.sql
 var embedMigrations embed.FS
 
-func NewDB(ctx context.Context, url string, zapLog *zap.SugaredLogger, drop bool) (DBT, error) {
+func NewDB(ctx context.Context, url string, zapLog *zap.SugaredLogger, testMode bool) (DBT, error) {
 	var db DBT
 	var err error
 	db.pool, err = pgxpool.Connect(ctx, url)
@@ -33,7 +33,8 @@ func NewDB(ctx context.Context, url string, zapLog *zap.SugaredLogger, drop bool
 	}
 	db.log = zapLog
 
-	if drop {
+	// очистка БД для тестов с использованием локальной БД
+	if testMode {
 		err = db.DropTables(ctx)
 		if err != nil {
 			return db, err
@@ -74,7 +75,7 @@ func (db *DBT) CreateTables(ctx context.Context) (err error) {
 }
 
 func (db *DBT) DropTables(ctx context.Context) (err error) {
-	sql := "drop table if exists users, tokens, orders, accruals, withdrawns, balance, queue cascade;"
+	sql := "drop table if exists goose_db_version, users, tokens, orders, accruals, withdrawns, balance, queue cascade;"
 	_, err = db.pool.Exec(ctx, sql)
 	return err
 }
