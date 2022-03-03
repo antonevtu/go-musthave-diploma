@@ -34,7 +34,7 @@ func NewDB(ctx context.Context, url string, zapLog *zap.SugaredLogger, drop bool
 	db.log = zapLog
 
 	if drop {
-		db.DropTables(ctx)
+		err = db.DropTables(ctx)
 		if err != nil {
 			return db, err
 		}
