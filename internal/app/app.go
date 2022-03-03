@@ -21,6 +21,7 @@ func Run() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer zLog.Sync()
 	zLog.Infow("starting service...")
 
 	cfgApp, err := cfg.New()
