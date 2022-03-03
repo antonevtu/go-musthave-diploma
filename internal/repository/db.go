@@ -24,7 +24,7 @@ type DBT struct {
 //go:embed migrations/*.sql
 var embedMigrations embed.FS
 
-func NewDB(ctx context.Context, url string, zapLog *zap.SugaredLogger) (DBT, error) {
+func NewDB(ctx context.Context, url string, zapLog *zap.SugaredLogger, drop bool) (DBT, error) {
 	var db DBT
 	var err error
 	db.pool, err = pgxpool.Connect(ctx, url)
@@ -32,6 +32,13 @@ func NewDB(ctx context.Context, url string, zapLog *zap.SugaredLogger) (DBT, err
 		return db, err
 	}
 	db.log = zapLog
+
+	if drop {
+		db.DropTables(ctx)
+		if err != nil {
+			return db, err
+		}
+	}
 
 	err = createTablesGoose(url)
 	//err = db.CreateTables(ctx)

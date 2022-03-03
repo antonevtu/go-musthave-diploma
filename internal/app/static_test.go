@@ -66,12 +66,12 @@ func TestStatic(t *testing.T) {
 	ctx := context.Background()
 
 	// локальная БД
-	db, err := repository.NewDB(context.Background(), *DatabaseURI, zLog)
+	db, err := repository.NewDB(context.Background(), *DatabaseURI, zLog, true)
 	assert.Equal(t, err, nil)
-	err = db.DropTables(ctx)
-	require.NoError(t, err)
-	err = db.CreateTables(ctx)
-	require.NoError(t, err)
+	//err = db.DropTables(ctx)
+	//require.NoError(t, err)
+	//err = db.CreateTables(ctx)
+	//require.NoError(t, err)
 
 	// тестовый сервер
 	r := handlers.NewRouter(&db, cfgApp)

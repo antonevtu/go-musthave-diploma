@@ -32,7 +32,7 @@ func Run() {
 	defer cancel()
 
 	// database
-	dbPool, err := repository.NewDB(ctx, cfgApp.DatabaseURI, zLog)
+	dbPool, err := repository.NewDB(ctx, cfgApp.DatabaseURI, zLog, false)
 	if err != nil {
 		zLog.Fatal(err)
 	}
